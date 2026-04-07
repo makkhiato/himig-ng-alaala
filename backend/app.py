@@ -8,8 +8,11 @@ Responsibilities:
 - Register all route blueprints
 """
 
-from flask import Flask, jsonify
+from flask import Flask
 from flask_cors import CORS
+from utils.vibe_mapper import map_to_vector
+
+from backend.utils.vibe_mapper import map_to_vector
 from routes.survey_routes import survey_bp
 from config.settings import Config
 
@@ -30,4 +33,4 @@ def create_app():
 app = create_app()
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=Config.DEBUG, port=5000)

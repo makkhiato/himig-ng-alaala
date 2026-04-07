@@ -18,6 +18,7 @@ from flask import Blueprint, request, jsonify
 # from backend.services.spotify_service import get_tracks
 # from backend.services.feature_service import get_song_metadata
 # from backend.services.recommender import find_best_match
+# from backend.services.photobooth_service import process_photo
 
 survey_bp = Blueprint("survey",__name__)
 
@@ -41,6 +42,8 @@ def process_survey():
 
         #result = recommend_song(answers, genre)
 
+        #photo_result = process_photo(photo_data)
+
         return jsonify({"message": "Survey processed successfully"}), 200
 
     except Exception as e:
@@ -48,8 +51,8 @@ def process_survey():
         print("Error processing the survey: ", e)
         return jsonify({"error": "Internal service error"}), 500
 
-# def recommend_songs(answers, genre):
-#     vector = map_to_vector(answers)
+# def recommend_song(answers, genre):
+#     vectors = map_to_vector(answers)
 #     query = build_query(vector, genre)
 #     songs = get_tracks(query)
 #     songs_metadata = get_song_metadata(songs)
