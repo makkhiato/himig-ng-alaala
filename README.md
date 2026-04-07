@@ -65,18 +65,6 @@ It also features a **photobooth system** that allows users to capture a moment a
 
 ---
 
-## 🧠 Data Processing Logic  
-
-The system uses a **rule-based scoring model**:
-
-- **Mood → Valence** (happy ↔ sad)  
-- **Energy → Intensity**  
-- **Activity → Tempo**  
-
-These values are mapped to Spotify audio features to find the best matching track.
-
----
-
 ## ▶️ Getting Started  
 
 ### 1️⃣ Clone the repository  
