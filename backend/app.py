@@ -10,9 +10,6 @@ Responsibilities:
 
 from flask import Flask
 from flask_cors import CORS
-from utils.vibe_mapper import map_to_vector
-
-from backend.utils.vibe_mapper import map_to_vector
 from routes.survey_routes import survey_bp
 from config.settings import Config
 
