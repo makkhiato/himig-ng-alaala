@@ -12,8 +12,8 @@ Responsibilities:
 These vectors will later be used to compare against song features
 using similarity scoring (Euclidean distance).
 
-INPUT: survey_routes.recommend_song -> Survey answers in JSON Format (except genre)
-OUTPUT: Dictionary of vectors -> survey_routes.recommend_song
+INPUT: survey_routes/recommend_song -> Survey answers in JSON Format (except genre)
+OUTPUT: Dictionary of vectors -> survey_routes/recommend_song
 """
 
 def normalize(vectors):
