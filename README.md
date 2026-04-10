@@ -94,6 +94,7 @@ python app.py
 
 ### 5️⃣ Open the frontend  
 Open `frontend/index.html` in your browser
+
 ---
 
 ## 🔐 Environment Variables  
