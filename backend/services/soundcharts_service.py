@@ -15,7 +15,7 @@ import time
 import requests
 from dotenv import load_dotenv
 from pathlib import Path
-from services import cache_manager as cm
+from backend.utils import cache_manager as cm
 from urllib.parse import quote
 
 # 1. SETUP: Ensure .env is loaded correctly from the backend root

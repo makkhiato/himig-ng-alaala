@@ -17,7 +17,7 @@ OUTPUT: Initialized entries -> music_data.json
 import requests
 import os
 from dotenv import load_dotenv
-from services import cache_manager as cm
+from backend.utils import cache_manager as cm
 
 load_dotenv()
 

@@ -10,7 +10,12 @@ Responsibilities:
 import json
 import os
 
-FILE_PATH="music_data.json"
+# Get the directory where THIS script (cache_manager.py) is located
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Point to your new data location
+# This ensures it always finds the file in backend/data/processed/ regardless of where you run it
+FILE_PATH = os.path.join(BASE_DIR, 'data', 'processed', 'music_data_normalized.json')
 
 def load_cache():
     """Reads the JSON file from the backend directory."""
@@ -60,7 +65,7 @@ def update_cache(cache_list, artist, title, new_data):
 
 
 # =====================================================================
-# TEST FUNCTION
+#                           TEST FUNCTION
 # =====================================================================
 def run_tests():
     print("--- STARTING CACHE MANAGER TESTS ---")
