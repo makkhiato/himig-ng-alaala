@@ -9,39 +9,40 @@
 
 ## 🚀 Overview  
 
-**Himig ng Alaala** is a web application that captures a user's emotions through a survey and recommends a Spotify song that reflects their current mood.
-
-It also features a **photobooth system** that allows users to capture a moment and download it via a **QR code**, combining music, emotion, and memory into a single experience.
+**Himig ng Alaala** is a full-stack web application that translates human sentiment into musical discovery. 
+By processing user input through a custom **Vibe-Mapping Engine**, the system performs high-dimensional similarity 
+math against a local SQLite database of 1000 tracks (sourced via Last.fm/Soundcharts) to find the perfect musical match.
 
 ---
 
 ## ✨ Features  
 
-- 🧠 **Emotion-Based Survey**  
-  Generates a “vibe profile” based on user input
+- 🧠 Vibe-Mapping Engine Converts qualitative survey data into quantitative vectors 
+(Valence, Energy, Danceability, and Normalized Tempo).
 
-- 🎧 **Spotify Song Recommendation**  
-  Matches songs using mood, energy, and tempo
+- 🧮 Vector-Based Recommendations Utilizes Cosine Similarity math to match user "vibes" 
+- against a normalized SQL database of nearly 1,000 songs.
 
-- 📸 **Photobooth System**  
-  Capture and preview images directly from the browser
+- 🗄️ Persistent Data Tier Moved from temporary sessions to a structured SQLite backend 
+- for faster queries and reliable data integrity.
 
-- 🔗 **QR Code Download**  
-  Instantly access and download photos via QR
+- 📸 Photobooth & QR System Browser-based image capture with dynamic QR code generation 
+- for seamless mobile downloads.
 
-- ♻️ **Stateless Design**  
-  No database — all data is temporary
+- 🛡️ Production-Ready Architecture Stateless Flask implementation with secured environment 
+- variables and professional error handling.
 
 ---
 
 ## 🏗️ Tech Stack  
 
-| Layer      | Technology            |
-|------------|-----------------------|
-| Frontend   | HTML, CSS, JavaScript |
-| Backend    | Python Flask          |
-| API        | Spotify Web API       |
-| Utilities  | QR Code Generator     |
+| Layer        | Technology                                     |
+|--------------|------------------------------------------------|
+| Frontend     | HTML, CSS, JavaScript                          |
+| Backend      | Python Flask                                   |
+| Data Science | Pandas, Scikit-Learn                           |
+| Database     | SQLite3                                        |
+| Utilities    | QR Code Generator, Last.fm API/Soundcharts API |
 
 ---
 
@@ -50,17 +51,17 @@ It also features a **photobooth system** that allows users to capture a moment a
 ```text
 [ User Survey ]
         ↓
-[ Vibe Processing (Backend) ]
+[ Vibe Mapping (Answers → Normalized Vector) ]
         ↓
-[ Spotify API Recommendation ]
+[ SQL Query (Genre-Filtered Retrieval) ]
         ↓
-[ Display Song Result ]
+[ Math Engine (Cosine Similarity Ranking) ]
+        ↓
+[ Display Top 5 "Vibe Matches" ]
         ↓
 [ Photobooth Capture ]
         ↓
-[ QR Code Generation ]
-        ↓
-[ Download Image ]
+[ QR Code & Local Download ]
 ```
 
 ---
@@ -73,20 +74,26 @@ git clone https://github.com/your-username/himig-ng-alaala.git
 cd himig-ng-alaala
 ```
 
-### 2️⃣ Install backend dependencies  
+### 2️⃣ Environment Setup 
+```bash
+python -m venv .venv
+# Activate venv: .venv\Scripts\activate (Windows) or source .venv/bin/activate (Mac/Linux)
+pip install -r requirements.txt
+```
+
+### 3️⃣ Install dependencies  
 ```bash
 cd backend
 pip install -r requirements.txt
 ```
 
-### 3️⃣ Run the backend  
+### 4️⃣ Run the backend 
 ```bash
 python app.py
 ```
 
-### 4️⃣ Open the frontend  
+### 5️⃣ Open the frontend  
 Open `frontend/index.html` in your browser
-
 ---
 
 ## 🔐 Environment Variables  
@@ -94,15 +101,18 @@ Open `frontend/index.html` in your browser
 Create a `.env` file inside `backend/`:
 
 ```env
-SPOTIFY_CLIENT_ID=your_client_id
-SPOTIFY_CLIENT_SECRET=your_client_secret
+SOUNDCHARTS_APP_ID=your_app_id
+SOUNDCHARTS_API_KEY=your_api_key
+# Last.fm credentials if used directly
+LASTFM_API_KEY=your_lastfm_key
 ```
 
 ---
 
 ## 📌 Notes  
 
-- ⚠️ No database is used  
-- 🗂️ Files are stored temporarily  
-- 🔄 Data resets after each session  
+- 🗂️ **Database:** Powered by a local SQLite engine.
+
+- ♻️ **Privacy:** User vectors are processed in-memory and are not persisted, ensuring user privacy.
+
 
