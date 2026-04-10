@@ -33,7 +33,4 @@ Thumbs.db
 node_modules/
 
 # Uploaded images (photobooth)
-uploads/
-
-# Test file
-test.py
+uploads
