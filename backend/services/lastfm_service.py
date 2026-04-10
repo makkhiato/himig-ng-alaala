@@ -5,7 +5,7 @@ foundation of the music_data.json file.
 
 Responsibilities:
 1. API Extraction: Fetches the top 100 tracks for a given genre tag.
-2. Data Seeding: Integrates with cache_manager.py to save the artist,
+2. Data Seeding: Integrates with cache_manager_1.py to save the artist,
    title, and genre locally.
 3. Formatting: Cleans the Last.fm response into a flat structure ready
    for the Soundcharts Phase.
@@ -17,7 +17,7 @@ OUTPUT: Initialized entries -> music_data.json
 import requests
 import os
 from dotenv import load_dotenv
-from services import cache_manager as cm
+from backend.utils import cache_manager as cm
 
 load_dotenv()
 
