@@ -1,6 +1,6 @@
 from services.lastfm_service import seed_genre_from_lastfm
 from services.soundcharts_service import process_genre_batch
-from backend.utils import cache_manager as cm
+from backend.utils import cache_manager_1 as cm
 
 
 def run_pilot():

@@ -10,7 +10,7 @@ Responsibilities:
 import json
 import os
 
-# Get the directory where THIS script (cache_manager.py) is located
+# Get the directory where THIS script (cache_manager_1.py) is located
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Point to your new data location
