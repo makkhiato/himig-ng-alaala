@@ -17,32 +17,32 @@ math against a local SQLite database of 1000 tracks (sourced via Last.fm/Soundch
 
 ## ✨ Features  
 
-- 🧠 Vibe-Mapping Engine Converts qualitative survey data into quantitative vectors 
+- **🧠 Vibe-Mapping Engine** Converts qualitative survey data into quantitative vectors 
 (Valence, Energy, Danceability, and Normalized Tempo).
 
-- 🧮 Vector-Based Recommendations Utilizes Cosine Similarity math to match user "vibes" 
+- **🧮 Vector-Based Recommendations** Utilizes Cosine Similarity math to match user "vibes" 
 - against a normalized SQL database of nearly 1,000 songs.
 
-- 🗄️ Persistent Data Tier Moved from temporary sessions to a structured SQLite backend 
+- **🗄️ Persistent Data Tier** Moved from temporary sessions to a structured SQLite backend 
 - for faster queries and reliable data integrity.
 
-- 📸 Photobooth & QR System Browser-based image capture with dynamic QR code generation 
+- **📸 Photobooth & QR System** Browser-based image capture with dynamic QR code generation 
 - for seamless mobile downloads.
 
-- 🛡️ Production-Ready Architecture Stateless Flask implementation with secured environment 
+- **🛡️ Production-Ready Architecture** Stateless Flask implementation with secured environment 
 - variables and professional error handling.
 
 ---
 
 ## 🏗️ Tech Stack  
 
-| Layer        | Technology                                     |
-|--------------|------------------------------------------------|
-| Frontend     | HTML, CSS, JavaScript                          |
-| Backend      | Python Flask                                   |
-| Data Science | Pandas, Scikit-Learn                           |
-| Database     | SQLite3                                        |
-| Utilities    | QR Code Generator, Last.fm API/Soundcharts API |
+| Layer            | Technology                                     |
+|------------------|------------------------------------------------|
+| **Frontend**     | HTML, CSS, JavaScript                          |
+| **Backend**      | Python Flask                                   |
+| **Data Science** | Pandas, Scikit-Learn                           |
+| **Database**     | SQLite3                                        |
+| **Utilities**    | QR Code Generator, Last.fm API/Soundcharts API |
 
 ---
 
