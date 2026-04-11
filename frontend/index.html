@@ -1,10 +1,151 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Title</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Himig ng Alaala</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Playfair+Display:ital,wght@0,500;1,500;1,700&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <div class="page-shell">
+    <header class="topbar">
+      <div class="brand">Himig ng Alaala</div>
+      <nav class="nav-links">
+        <a href="#about">About</a>
+        <a href="#contact">Contact</a>
+      </nav>
+    </header>
 
+    <main id="app">
+      <section class="screen active" id="screen-home">
+        <div class="hero-grid">
+          <div class="hero-strips">
+            <div class="hero-strip big tilt-left">
+              <div></div><div></div><div></div><div></div>
+            </div>
+            <div class="hero-strip small tilt-right">
+              <div></div><div></div><div></div><div></div>
+            </div>
+          </div>
+          <div class="hero-copy">
+            <h1>Himig ng Alaala</h1>
+            <h2>sari-saring kanta sa bawat memorya</h2>
+            <p>Capture your moments with a rhythm designed just for you. See your smiles, hear your story.</p>
+            <button class="primary-btn" data-next="screen-intro">START</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" id="screen-intro">
+        <div class="center-copy narrow">
+          <h1>What does your photo sound like?</h1>
+          <h2>Forget the filters, let's find your rhythm.</h2>
+          <p>A photo captures the moment, but a song captures the soul. <strong>Answer a few quick questions</strong> about your vibe right now, and we’ll reveal the perfect soundtrack for your photos.</p>
+          <button class="primary-btn" id="startQuizBtn">ANSWER</button>
+        </div>
+      </section>
+
+      <section class="screen" id="screen-quiz">
+        <div class="progress-row" id="progressRow"></div>
+        <div class="quiz-shell">
+          <button class="arrow-btn" id="prevQuestion" aria-label="Previous question">&#9664;</button>
+          <div class="question-card" id="questionCard"></div>
+          <button class="arrow-btn" id="nextQuestion" aria-label="Next question">&#9654;</button>
+        </div>
+      </section>
+
+      <section class="screen" id="screen-ready">
+        <div class="center-copy narrow">
+          <h1>You’re all set! Time for photos.</h1>
+          <p>Get ready to strike a pose! You have <strong>10 seconds between shots</strong>: 4 photos, 1 strip, and your perfect song match. Let’s make your memory!</p>
+          <button class="primary-btn" id="readyCaptureBtn">CAPTURE</button>
+        </div>
+      </section>
+
+      <section class="screen" id="screen-camera">
+        <div class="camera-layout">
+          <aside class="guide-box">
+            <h3>Quick Guide 📸</h3>
+            <ul>
+              <li>Stay in the frame</li>
+              <li>You have 10 seconds to switch poses</li>
+              <li>4 shots in total</li>
+              <li>Get your song match after the last photo</li>
+              <li>Scan &amp; save the QR code at the end</li>
+            </ul>
+          </aside>
+
+          <div class="camera-stage">
+            <video id="video" autoplay playsinline muted></video>
+            <canvas id="shotCanvas" hidden></canvas>
+            <div class="camera-overlay"></div>
+            <div class="camera-status" id="cameraStatus">Allow camera access to start.</div>
+            <div class="countdown-badge hidden" id="countdownBadge">10</div>
+            <div class="flash-layer hidden" id="flashLayer"></div>
+          </div>
+
+          <aside class="thumb-column">
+            <div class="thumb-slot"><img alt="Shot 1 preview" /></div>
+            <div class="thumb-slot"><img alt="Shot 2 preview" /></div>
+            <div class="thumb-slot"><img alt="Shot 3 preview" /></div>
+            <div class="thumb-slot"><img alt="Shot 4 preview" /></div>
+          </aside>
+        </div>
+
+        <div class="camera-actions">
+          <button class="secondary-btn" id="openCameraBtn">OPEN CAMERA</button>
+          <button class="primary-btn" id="captureSequenceBtn">CAPTURE</button>
+        </div>
+      </section>
+
+      <section class="screen" id="screen-layout">
+        <div class="center-copy layout-heading">
+          <h2 class="mono-title">Choose your layout</h2>
+        </div>
+        <div class="backend-note" id="backendStatus">Waiting for your layout choice. Final song comes from the backend.</div>
+        <div class="layout-grid" id="layoutGrid"></div>
+      </section>
+
+      <section class="screen" id="screen-result">
+        <div class="result-grid">
+          <div class="result-copy">
+            <h1>Ang iyong himig:</h1>
+            <div class="song-card">
+              <div id="songTitle">Song Title</div>
+              <div id="songArtist">Artist</div>
+            </div>
+            <p>Bring this memory to life—scan your strip to play your song.</p>
+            <div class="result-links">
+              <a id="spotifyLink" class="text-link" target="_blank" rel="noopener">Open in Spotify</a>
+              <a id="downloadLink" class="text-link" download="himig-ng-alaala-strip.png">Download photostrip PNG</a>
+            </div>
+          </div>
+
+          <div class="strip-preview-wrap">
+            <img id="finalStrip" alt="Final photostrip" />
+          </div>
+
+          <div class="result-actions">
+            <div class="qr-wrap">
+              <div class="qr-title">Save your photo!</div>
+              <img id="qrImage" alt="QR code for song" />
+            </div>
+            <button class="primary-btn" id="printBtn">PRINT</button>
+            <button class="primary-btn" id="restartBtn">START AGAIN</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="footer" id="about">
+    <p><strong>About:</strong> Himig ng Alaala is a photobooth music recommender with a browser-based frontend and a required backend endpoint at <code>localhost:5000/process-survey</code> for song matching.</p>
+    <p id="contact"><strong>Contact:</strong> Your school booth team</p>
+  </footer>
+
+  <script src="script.js"></script>
 </body>
 </html>
