@@ -35,6 +35,13 @@ def process_survey():
         raw_genre = data.get("genre", {})
         genre_dict = {"genre": raw_genre} if isinstance(raw_genre, str) else raw_genre
 
+        if genre_dict["genre"] == "R&B":
+            genre_dict.update({"genre": "rnb"})
+        elif genre_dict["genre"] == "Hip-Hop":
+            genre_dict.update({"genre": "hiphop"})
+        elif genre_dict["genre"] == "K-Pop":
+            genre_dict.update({"genre": "kpop"})
+
         # 4. Logic: Map survey to Vector -> Get Recommendations
         user_vector = map_to_vector(answers)
         recommendations = get_recommendations(user_vector, genre_dict)
