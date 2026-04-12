@@ -8,48 +8,68 @@ Responsibilities:
 - Call vibe_mapper.py to convert answers into a target vector
 - Return the processed vector to the frontend
 
-INPUT: Frontend -> Survey answers in JSON Format
-OUTPUT: Recommended Song Title and Artist in JSON Format -> Frontend
+INPUT: Frontend -> Survey answers in JSON format
+OUTPUT: Recommended song title and artist in JSON format -> Frontend
 """
 
 from flask import Blueprint, request, jsonify
-from backend.utils.vibe_mapper import map_to_vector
-from backend.services.recommender import get_recommendations
+from utils.vibe_mapper import map_to_vector
+from services.recommender import get_recommendations
 import json
 
+survey_bp = Blueprint("survey", __name__)
 
-survey_bp = Blueprint("survey",__name__)
 
-@survey_bp.route("/process-survey", methods = ["POST"])
+@survey_bp.route("/process-survey", methods=["POST"])
 def process_survey():
     try:
-        # 1. Get JSON Data from request
-        data = request.json
+        # 1. Get JSON data from request
+        data = request.get_json()
 
-        # 2. Validating if Frontend sent the survey answers
+        # 2. Validate if frontend sent the survey answers
         if not data:
             return jsonify({"error": "No JSON received"}), 400
 
         # 3. Extract answers and genre
         answers = data.get("answers", {})
-        raw_genre = data.get("genre", {})
-        genre_dict = {"genre": raw_genre} if isinstance(raw_genre, str) else raw_genre
+        raw_genre = data.get("genre", "")
 
-        if genre_dict["genre"] == "R&B":
-            genre_dict.update({"genre": "rnb"})
-        elif genre_dict["genre"] == "Hip-Hop":
-            genre_dict.update({"genre": "hiphop"})
-        elif genre_dict["genre"] == "K-Pop":
-            genre_dict.update({"genre": "kpop"})
+        if isinstance(raw_genre, dict):
+            genre_value = raw_genre.get("genre", "")
+        else:
+            genre_value = raw_genre
 
-        # 4. Logic: Map survey to Vector -> Get Recommendations
+        # Normalize genre values from frontend
+        genre_map = {
+            "R&B": "rnb",
+            "RnB": "rnb",
+            "Hip-Hop": "hiphop",
+            "HipHop": "hiphop",
+            "K-Pop": "kpop",
+            "KPop": "kpop",
+            "Pop": "pop",
+            "OPM": "opm",
+            "Rock": "rock",
+            "Metal": "metal",
+            "Indie": "indie",
+            "Jazz": "jazz",
+            "Acoustic": "acoustic"
+        }
+
+        normalized_genre = genre_map.get(genre_value, str(genre_value).lower())
+        genre_dict = {"genre": normalized_genre}
+
+        # 4. Logic: Map survey to vector -> Get recommendations
         user_vector = map_to_vector(answers)
         recommendations = get_recommendations(user_vector, genre_dict)
 
-        # We parse the string back to a Python list so jsonify sends it properly
-        recommendations_list = json.loads(recommendations)
+        # If recommender returns a JSON string, parse it
+        if isinstance(recommendations, str):
+            recommendations_list = json.loads(recommendations)
+        else:
+            recommendations_list = recommendations
 
-        # Check for errors returned by the recommender logic
+        # Check for errors returned by recommender logic
         if isinstance(recommendations_list, dict) and "error" in recommendations_list:
             return jsonify(recommendations_list), 404
 
@@ -59,6 +79,8 @@ def process_survey():
         }), 200
 
     except Exception as e:
-        #Catch unexpected errors to avoid crashing the app
-        print("Error processing the survey: ", e)
-        return jsonify({"error": "Internal service error", "details": str(e)}), 500
+        print("Error processing the survey:", e)
+        return jsonify({
+            "error": "Internal service error",
+            "details": str(e)
+        }), 500
