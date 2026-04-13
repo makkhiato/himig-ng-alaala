@@ -65,7 +65,7 @@ def get_recommendations(user_vector, user_genre):
     # Sort and pick top 5
     top_5 = df_genre.sort_values(by='similarity_percentage', ascending=False).head(5)
 
-    result_columns = ['artist', 'title', 'similarity_percentage', 'genre']
+    result_columns = ['artist', 'title', 'similarity_percentage', 'genre', 'spotify_id']
     recommendations_list = top_5[result_columns].to_dict(orient='records')
 
     # Return as a JSON string
