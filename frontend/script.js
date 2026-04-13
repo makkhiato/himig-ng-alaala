@@ -20,10 +20,11 @@ const previewShot3 = document.getElementById('previewShot3');
 const previewShot4 = document.getElementById('previewShot4');
 const previewStripTitle = document.getElementById('previewStripTitle');
 const previewStripArtist = document.getElementById('previewStripArtist');
+const previewSpotifyCode = document.getElementById('previewSpotifyCode');
 
 const BACKEND_URL = 'http://127.0.0.1:5000/process-survey';
-const STRIP_EXPORT_WIDTH = 320;
-const STRIP_EXPORT_HEIGHT = 980;
+const STRIP_EXPORT_WIDTH = 640;
+const STRIP_EXPORT_HEIGHT = 1960;
 
 const questions = [
   {
@@ -240,49 +241,6 @@ const layouts = [
   }
 ];
 
-const layoutRenderMap = {
-  monami: {
-    slots: [
-      { x: 52, y: 177, w: 216, h: 118, r: 12 },
-      { x: 52, y: 375, w: 216, h: 118, r: 12 },
-      { x: 52, y: 573, w: 216, h: 118, r: 12 },
-      { x: 52, y: 771, w: 216, h: 118, r: 12 }
-    ],
-    title: { x: 160, y: 915, maxWidth: 120, lineHeight: 10, font: 'bold 8px "Space Mono", monospace' },
-    artist: { x: 160, y: 932, maxWidth: 120, lineHeight: 9, font: 'bold 7px "DM Sans", sans-serif' }
-  },
-  butterball: {
-    slots: [
-      { x: 56, y: 206, w: 208, h: 110, r: 10 },
-      { x: 56, y: 404, w: 208, h: 110, r: 10 },
-      { x: 56, y: 602, w: 208, h: 110, r: 10 },
-      { x: 56, y: 800, w: 208, h: 110, r: 10 }
-    ],
-    title: { x: 160, y: 920, maxWidth: 100, lineHeight: 9, font: 'bold 7px "Space Mono", monospace' },
-    artist: { x: 160, y: 938, maxWidth: 100, lineHeight: 8, font: 'bold 6px "DM Sans", sans-serif' }
-  },
-  snoopy: {
-    slots: [
-      { x: 48, y: 182, w: 224, h: 116, r: 10 },
-      { x: 48, y: 380, w: 224, h: 116, r: 10 },
-      { x: 48, y: 578, w: 224, h: 116, r: 10 },
-      { x: 48, y: 776, w: 224, h: 116, r: 10 }
-    ],
-    title: { x: 160, y: 920, maxWidth: 120, lineHeight: 10, font: 'bold 8px "Space Mono", monospace' },
-    artist: { x: 160, y: 937, maxWidth: 120, lineHeight: 9, font: 'bold 7px "DM Sans", sans-serif' }
-  },
-  bubble: {
-    slots: [
-      { x: 46, y: 183, w: 228, h: 116, r: 10 },
-      { x: 46, y: 381, w: 228, h: 116, r: 10 },
-      { x: 46, y: 579, w: 228, h: 116, r: 10 },
-      { x: 46, y: 777, w: 228, h: 116, r: 10 }
-    ],
-    title: { x: 160, y: 920, maxWidth: 120, lineHeight: 10, font: 'bold 8px "Space Mono", monospace' },
-    artist: { x: 160, y: 937, maxWidth: 120, lineHeight: 9, font: 'bold 7px "DM Sans", sans-serif' }
-  }
-};
-
 let currentQuestionIndex = 0;
 const answers = {};
 let stream = null;
@@ -491,43 +449,40 @@ function renderLayouts() {
   `).join('');
 
   layoutGrid.querySelectorAll('.layout-card').forEach(card => {
-  card.addEventListener('click', async () => {
-    selectedLayout = layouts.find(layout => layout.id === card.dataset.layout);
+    card.addEventListener('click', async () => {
+      selectedLayout = layouts.find(layout => layout.id === card.dataset.layout);
 
-    layoutGrid.querySelectorAll('.layout-card').forEach(c => c.classList.remove('active'));
-    card.classList.add('active');
+      layoutGrid.querySelectorAll('.layout-card').forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
 
-    backendStatus.textContent = 'Calling backend...';
-    card.insertAdjacentHTML('beforeend', '<div class="mini-loading">Getting your top matches...</div>');
+      backendStatus.textContent = 'Calling backend...';
+      card.insertAdjacentHTML('beforeend', '<div class="mini-loading">Getting your top matches...</div>');
 
-    try {
-      const res = await processSurveyWithBackend();
+      try {
+        const res = await processSurveyWithBackend();
+        const safeMatches = Array.isArray(res?.results) ? res.results : [];
 
-      // 🔥 FORCE ARRAY SAFETY (THIS FIXES YOUR ERROR)
-      const safeMatches = Array.isArray(res?.results) ? res.results : [];
+        if (!safeMatches.length) {
+          throw new Error('No matches returned from backend.');
+        }
 
-      if (!safeMatches.length) {
-        throw new Error('No matches returned from backend.');
+        topMatches = safeMatches;
+        renderTop5(topMatches);
+        showScreen('screen-top5');
+      } catch (error) {
+        console.error(error);
+        backendStatus.textContent = 'Backend or matching failed. Check console.';
+        alert(error.message || 'Failed to get top matches.');
+      } finally {
+        renderLayouts();
       }
-
-      topMatches = safeMatches;
-
-      renderTop5(topMatches);
-      showScreen('screen-top5');
-
-    } catch (error) {
-      console.error(error);
-      backendStatus.textContent = 'Backend or matching failed. Check console.';
-      alert(error.message || 'Failed to get top matches.');
-    } finally {
-      renderLayouts();
-    }
+    });
   });
-});
 }
 
 function renderTop5(matches = []) {
   if (!Array.isArray(matches)) matches = [];
+
   top5Grid.innerHTML = matches.map(song => `
     <div class="top5-card" data-rank="${song.rank}">
       <div class="top5-rank">${song.rank}</div>
@@ -545,21 +500,34 @@ function renderTop5(matches = []) {
     </div>
   `).join('');
 
-  top5Grid.querySelectorAll('.top5-card').forEach(card => {
-    card.addEventListener('click', async () => {
+  top5Grid.querySelectorAll('.top5-pick').forEach(button => {
+    button.addEventListener('click', async (event) => {
+      event.stopPropagation();
+
+      const card = button.closest('.top5-card');
       const chosenRank = Number(card.dataset.rank);
       const chosenSong = matches.find(song => song.rank === chosenRank);
-      if (!chosenSong) return;
 
-      finalSong = {
-        title: chosenSong.title,
-        artist: chosenSong.artist
-      };
+      if (!chosenSong) {
+        alert('Could not find selected song.');
+        return;
+      }
 
-      finalStripDataUrl = await generateStrip(capturedShots, selectedLayout, finalSong);
+      try {
+        finalSong = {
+          title: chosenSong.title,
+          artist: chosenSong.artist,
+          spotifyUrl: chosenSong.spotifyUrl || '',
+          spotifyUri: chosenSong.spotifyUri || ''
+        };
 
-      await populateResult();
-      showScreen('screen-result');
+        finalStripDataUrl = await generateStrip(capturedShots, selectedLayout, finalSong);
+        await populateResult();
+        showScreen('screen-result');
+      } catch (error) {
+        console.error('Top 5 choose error:', error);
+        alert(error.message || 'Failed to load result page.');
+      }
     });
   });
 }
@@ -614,7 +582,6 @@ function normalizeGenre(label) {
 
 function processSurveyWithBackend() {
   const payload = buildPayload();
-
   payload.strip = finalStripDataUrl || null;
 
   return fetch(BACKEND_URL, {
@@ -622,65 +589,85 @@ function processSurveyWithBackend() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   })
-  .then(async (response) => {
-    let data;
+    .then(async (response) => {
+      let data;
 
-    try {
-      data = await response.json();
-    } catch {
-      throw new Error('Backend did not return valid JSON.');
-    }
-
-    console.log('Backend response:', data);
-
-    if (!response.ok) {
-      throw new Error(data.message || 'Backend request failed.');
-    }
-
-    let results = [];
-
-    if (Array.isArray(data.results) && data.results.length > 0) {
-      results = data.results;
-    } else {
-      const title = data.title || data.song_title || data.songTitle;
-      const artist = data.artist || data.song_artist || data.songArtist;
-
-      if (title && artist) {
-        results = [{ title, artist, match: 100 }];
-      } else {
-        throw new Error('Backend JSON is missing usable song data.');
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error('Backend did not return valid JSON.');
       }
-    }
-processSurveyWithBackend.lastDownloadUrl = data.download_url || null;
-    return {
-      results: results.slice(0, 5).map((song, index) => ({
-        rank: index + 1,
-        title: song.title || 'Unknown Title',
-        artist: song.artist || 'Unknown Artist',
-        match: Number(song.match ?? song.score ?? song.percentage ?? (100 - index * 5)),
-        albumArt: song.albumArt || song.album_art || song.image || song.cover || ''
-      })),
 
-      // ✅ THIS IS WHAT FIXES YOUR QR FLOW
-      download_url: data.download_url || null
-    };
-  });
+      console.log('Backend response:', data);
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Backend request failed.');
+      }
+
+      let results = [];
+
+      if (Array.isArray(data.results) && data.results.length > 0) {
+        results = data.results;
+      } else {
+        const title = data.title || data.song_title || data.songTitle;
+        const artist = data.artist || data.song_artist || data.songArtist;
+        const spotifyUrl = data.spotify_url || data.spotifyUrl || '';
+        const spotifyUri = data.spotify_uri || data.spotifyUri || '';
+
+        if (title && artist) {
+          results = [{ title, artist, match: 100, spotifyUrl, spotifyUri }];
+        } else {
+          throw new Error('Backend JSON is missing usable song data.');
+        }
+      }
+
+      processSurveyWithBackend.lastDownloadUrl = data.download_url || null;
+
+      return {
+        results: results.slice(0, 5).map((song, index) => ({
+          rank: index + 1,
+          title: song.title || 'Unknown Title',
+          artist: song.artist || 'Unknown Artist',
+          match: Number(song.match ?? song.score ?? song.percentage ?? (100 - index * 5)),
+          albumArt: song.albumArt || song.album_art || song.image || song.cover || '',
+          spotifyUrl: song.spotifyUrl || song.spotify_url || song.external_url || '',
+          spotifyUri: song.spotifyUri || song.spotify_uri || ''
+        })),
+        download_url: data.download_url || null
+      };
+    });
 }
 
 function loadImage(src) {
   return new Promise((resolve, reject) => {
     const img = new Image();
+    img.crossOrigin = 'anonymous';
     img.onload = () => resolve(img);
     img.onerror = () => reject(new Error(`Failed to load image: ${src}`));
     img.src = src;
   });
 }
 
-async function getAutoLayoutConfig(layout) {
-  if (!layout.frameSrc) throw new Error("Missing frame source");
+function buildSpotifySearchUrl(title, artist) {
+  const q = encodeURIComponent(`${title} ${artist}`);
+  return `https://open.spotify.com/search/${q}`;
+}
 
-  const { holes, frameWidth, frameHeight } =
-    await detectPhotoSlotsFromFrame(layout.frameSrc);
+function spotifyUriFromUrl(url) {
+  if (!url) return '';
+  const match = url.match(/open\.spotify\.com\/track\/([A-Za-z0-9]+)/);
+  return match ? `spotify:track:${match[1]}` : '';
+}
+
+function buildSpotifyCodeImageUrl(spotifyUri, width = 420) {
+  if (!spotifyUri) return '';
+  return `https://scannables.scdn.co/uri/plain/png/F7F1D8/black/${width}/${encodeURIComponent(spotifyUri)}`;
+}
+
+async function getAutoLayoutConfig(layout) {
+  if (!layout.frameSrc) throw new Error('Missing frame source');
+
+  const { holes, frameWidth, frameHeight } = await detectPhotoSlotsFromFrame(layout.frameSrc);
 
   const scaleX = STRIP_EXPORT_WIDTH / frameWidth;
   const scaleY = STRIP_EXPORT_HEIGHT / frameHeight;
@@ -693,23 +680,97 @@ async function getAutoLayoutConfig(layout) {
     r: 12
   }));
 
-  return {
-    slots,
-    title: {
-      x: STRIP_EXPORT_WIDTH / 2,
-      y: STRIP_EXPORT_HEIGHT - 70,
-      maxWidth: 140,
-      lineHeight: 10,
-      font: 'bold 8px "Space Mono", monospace'
-    },
-    artist: {
-      x: STRIP_EXPORT_WIDTH / 2,
-      y: STRIP_EXPORT_HEIGHT - 50,
-      maxWidth: 140,
-      lineHeight: 9,
-      font: 'bold 7px "DM Sans", sans-serif'
+return {
+  slots,
+
+  spotifyCode: {
+    x: (STRIP_EXPORT_WIDTH - 252) / 2,
+    y: 1676,
+    w: 252,
+    h: 68
+  },
+
+  title: {
+    x: STRIP_EXPORT_WIDTH / 2,
+    y: 1776,
+    maxWidth: 300,
+    lineHeight: 20,
+    font: 'italic 18px "Playfair Display", serif'
+  },
+
+  artist: {
+    x: STRIP_EXPORT_WIDTH / 2,
+    y: 1806,
+    maxWidth: 300,
+    lineHeight: 16,
+    font: '600 14px "DM Sans", sans-serif'
+  }
+};
+}
+
+async function applyPreviewLayout(layout) {
+  const previewSlots = [
+    document.querySelector('.slot-1'),
+    document.querySelector('.slot-2'),
+    document.querySelector('.slot-3'),
+    document.querySelector('.slot-4')
+  ];
+
+  const config = await getAutoLayoutConfig(layout);
+
+  previewSlots.forEach((slot, i) => {
+    if (!slot || !config.slots[i]) return;
+
+    const s = config.slots[i];
+    slot.style.left = `${(s.x / STRIP_EXPORT_WIDTH) * 100}%`;
+    slot.style.top = `${(s.y / STRIP_EXPORT_HEIGHT) * 100}%`;
+    slot.style.width = `${(s.w / STRIP_EXPORT_WIDTH) * 100}%`;
+    slot.style.height = `${(s.h / STRIP_EXPORT_HEIGHT) * 100}%`;
+    slot.style.borderRadius = `${s.r || 10}px`;
+  });
+
+  if (previewSpotifyCode && config.spotifyCode) {
+    previewSpotifyCode.style.left = `${((config.spotifyCode.x + config.spotifyCode.w / 2) / STRIP_EXPORT_WIDTH) * 100}%`;
+    previewSpotifyCode.style.top = `${(config.spotifyCode.y / STRIP_EXPORT_HEIGHT) * 100}%`;
+    previewSpotifyCode.style.width = `${(config.spotifyCode.w / STRIP_EXPORT_WIDTH) * 100}%`;
+  }
+
+  if (previewStripTitle && config.title) {
+    previewStripTitle.style.top = `${(config.title.y / STRIP_EXPORT_HEIGHT) * 100}%`;
+  }
+
+  if (previewStripArtist && config.artist) {
+    previewStripArtist.style.top = `${(config.artist.y / STRIP_EXPORT_HEIGHT) * 100}%`;
+  }
+}
+
+async function applyPreviewBottomMeta(layout, song) {
+  const config = await getAutoLayoutConfig(layout);
+
+  const spotifyUri = song.spotifyUri || spotifyUriFromUrl(song.spotifyUrl);
+  const spotifyCodeUrl = buildSpotifyCodeImageUrl(spotifyUri);
+
+  if (previewSpotifyCode) {
+    if (spotifyCodeUrl) {
+      previewSpotifyCode.src = spotifyCodeUrl;
+      previewSpotifyCode.style.display = 'block';
+      previewSpotifyCode.style.top = `${(config.spotifyCode.y / STRIP_EXPORT_HEIGHT) * 100}%`;
+      previewSpotifyCode.style.width = `${(config.spotifyCode.w / STRIP_EXPORT_WIDTH) * 100}%`;
+    } else {
+      previewSpotifyCode.removeAttribute('src');
+      previewSpotifyCode.style.display = 'none';
     }
-  };
+  }
+
+  if (previewStripTitle) {
+    previewStripTitle.textContent = song.title || '';
+    previewStripTitle.style.top = `${(config.title.y / STRIP_EXPORT_HEIGHT) * 100}%`;
+  }
+
+  if (previewStripArtist) {
+    previewStripArtist.textContent = song.artist || '';
+    previewStripArtist.style.top = `${(config.artist.y / STRIP_EXPORT_HEIGHT) * 100}%`;
+  }
 }
 
 async function generateStrip(shots, layout, song) {
@@ -720,9 +781,8 @@ async function generateStrip(shots, layout, song) {
   canvas.height = STRIP_EXPORT_HEIGHT;
 
   const ctx = canvas.getContext('2d');
-
   ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = "high";
+  ctx.imageSmoothingQuality = 'high';
 
   let overlayImage = null;
 
@@ -730,33 +790,47 @@ async function generateStrip(shots, layout, song) {
     try {
       overlayImage = await loadImage(layout.frameSrc);
     } catch (e) {
-      console.warn("Frame load failed", e);
+      console.warn('Frame load failed', e);
     }
   }
 
-  // 🔥 USE NEW CONFIG WITH SCALING
   const config = await getAutoLayoutConfig(layout);
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // draw photos
   for (let i = 0; i < Math.min(4, shots.length, config.slots.length); i++) {
     const img = await loadImage(shots[i]);
     drawCoverImage(ctx, img, config.slots[i]);
   }
 
-  // draw frame ON TOP
   if (overlayImage) {
     ctx.drawImage(overlayImage, 0, 0, canvas.width, canvas.height);
   }
 
-  // draw text
+  const spotifyUri = song.spotifyUri || spotifyUriFromUrl(song.spotifyUrl);
+  const spotifyCodeUrl = buildSpotifyCodeImageUrl(spotifyUri);
+
+  if (spotifyCodeUrl) {
+    try {
+      const spotifyCodeImg = await loadImage(spotifyCodeUrl);
+      ctx.drawImage(
+        spotifyCodeImg,
+        config.spotifyCode.x,
+        config.spotifyCode.y,
+        config.spotifyCode.w,
+        config.spotifyCode.h
+      );
+    } catch (e) {
+      console.warn('Spotify code image load failed', e);
+    }
+  }
+
   ctx.save();
-  ctx.fillStyle = '#7d2b2d';
+ctx.fillStyle = '#6B2A2E';
   ctx.textAlign = 'center';
 
   ctx.font = config.title.font;
-  wrapText(ctx, song.title, config.title.x, config.title.y, config.title.maxWidth, config.title.lineHeight, 2);
+  wrapText(ctx, song.title, config.title.x, config.title.y, config.title.maxWidth, config.title.lineHeight, 1);
 
   ctx.font = config.artist.font;
   wrapText(ctx, song.artist, config.artist.x, config.artist.y, config.artist.maxWidth, config.artist.lineHeight, 1);
@@ -766,28 +840,12 @@ async function generateStrip(shots, layout, song) {
   return canvas.toDataURL('image/png');
 }
 
-function drawStripBase(ctx, canvas, layout) {
-  const config = getLayoutRenderConfig(layout.id);
-
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // ❌ REMOVE white slot background completely
-  // (this was blocking your frame holes)
-
-  // optional debug bg (safe to remove)
-  ctx.fillStyle = 'transparent';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-}
-
-const DEBUG_SLOTS = false;
-
 function drawCoverImage(ctx, img, slot) {
   ctx.save();
 
   ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = "high";
+  ctx.imageSmoothingQuality = 'high';
 
-  // clip to hole
   roundedRect(ctx, slot.x, slot.y, slot.w, slot.h, slot.r || 12);
   ctx.clip();
 
@@ -796,7 +854,6 @@ function drawCoverImage(ctx, img, slot) {
 
   let drawW, drawH;
 
-  // 🔥 balanced cover fit (no ugly zoom)
   if (imgRatio > slotRatio) {
     drawH = slot.h;
     drawW = drawH * imgRatio;
@@ -809,14 +866,6 @@ function drawCoverImage(ctx, img, slot) {
   const dy = slot.y + (slot.h - drawH) / 2;
 
   ctx.drawImage(img, dx, dy, drawW, drawH);
-
-  // 🔥 DEBUG MODE (toggle true)
-  if (DEBUG_SLOTS) {
-    ctx.strokeStyle = 'red';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(slot.x, slot.y, slot.w, slot.h);
-  }
-
   ctx.restore();
 }
 
@@ -939,7 +988,6 @@ async function detectPhotoSlotsFromFrame(frameSrc) {
       if (isTransparent(pixelIndex)) {
         const hole = floodFill(x, y);
 
-        // ignore tiny noise
         if (hole.w > 50 && hole.h > 50) {
           holes.push(hole);
         }
@@ -947,12 +995,9 @@ async function detectPhotoSlotsFromFrame(frameSrc) {
     }
   }
 
-  // sort top → bottom
   holes.sort((a, b) => (b.w * b.h) - (a.w * a.h));
-holes.shift(); // remove largest
-
-// ✅ now sort real slots top → bottom
-holes.sort((a, b) => a.y - b.y);
+  holes.shift();
+  holes.sort((a, b) => a.y - b.y);
 
   return {
     holes,
@@ -962,19 +1007,19 @@ holes.sort((a, b) => a.y - b.y);
 }
 
 async function uploadToCloudinary(dataUrl) {
-  const cloudName = "deugdxahz";
-  const uploadPreset = "photobooth_upload";
+  const cloudName = 'deugdxahz';
+  const uploadPreset = 'photobooth_upload';
 
   const formData = new FormData();
 
   const blob = dataURLtoBlob(dataUrl);
-  formData.append("file", blob);
-  formData.append("upload_preset", uploadPreset);
+  formData.append('file', blob);
+  formData.append('upload_preset', uploadPreset);
 
   const res = await fetch(
     `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
     {
-      method: "POST",
+      method: 'POST',
       body: formData
     }
   );
@@ -982,49 +1027,88 @@ async function uploadToCloudinary(dataUrl) {
   const data = await res.json();
 
   if (!data.secure_url) {
-    throw new Error("Upload failed");
+    throw new Error('Upload failed');
   }
 
   return data.secure_url;
 }
 
 async function populateResult() {
-  document.getElementById('songTitle').textContent = finalSong.title;
-  document.getElementById('songArtist').textContent = `by ${finalSong.artist}`;
-  document.getElementById('finalStrip').src = finalStripDataUrl;
-
+  const songTitleEl = document.getElementById('songTitle');
+  const songArtistEl = document.getElementById('songArtist');
   const downloadLink = document.getElementById('downloadLink');
-  downloadLink.href = finalStripDataUrl;
-
   const qrImage = document.getElementById('qrImage');
+  const spotifyLink = document.getElementById('spotifyLink');
+
+  const previewShots = [
+    document.getElementById('previewShot1'),
+    document.getElementById('previewShot2'),
+    document.getElementById('previewShot3'),
+    document.getElementById('previewShot4')
+  ];
+
+  if (
+    !songTitleEl ||
+    !songArtistEl ||
+    !downloadLink ||
+    !qrImage ||
+    !spotifyLink ||
+    !previewFrame ||
+    !previewStripTitle ||
+    !previewStripArtist ||
+    !stripStage ||
+    previewShots.some(img => !img)
+  ) {
+    throw new Error('Result page elements are missing. Check your HTML IDs.');
+  }
+
+  if (!finalSong) {
+    throw new Error('No selected song found.');
+  }
+
+  songTitleEl.textContent = finalSong.title;
+  songArtistEl.textContent = `by ${finalSong.artist}`;
+
+  previewShots.forEach((img, index) => {
+    img.src = capturedShots[index] || '';
+  });
+
+  previewFrame.src = selectedLayout?.frameSrc || '';
+
+  stripStage.classList.remove('monami', 'butterball', 'snoopy', 'bubble');
+  stripStage.classList.add(selectedLayout.id);
+
+  await applyPreviewLayout(selectedLayout);
+  await applyPreviewBottomMeta(selectedLayout, finalSong);
+
+  downloadLink.href = finalStripDataUrl;
+  spotifyLink.href = finalSong.spotifyUrl || buildSpotifySearchUrl(finalSong.title, finalSong.artist);
 
   try {
-    qrImage.alt = "Uploading image...";
+    qrImage.alt = 'Uploading image...';
 
     const imageUrl = await uploadToCloudinary(finalStripDataUrl);
-
-    // store for debugging / future use
     processSurveyWithBackend.lastDownloadUrl = imageUrl;
 
     qrImage.src =
       `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(imageUrl)}`;
-
+    qrImage.alt = 'QR code for photostrip download';
   } catch (err) {
     console.error(err);
 
-    // fallback QR (still works, but not cross-device)
     const blob = dataURLtoBlob(finalStripDataUrl);
     const blobUrl = URL.createObjectURL(blob);
 
     qrImage.src =
       `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(blobUrl)}`;
+    qrImage.alt = 'Temporary QR code for photostrip';
 
-    alert("Cloud upload failed. Using temporary QR only.");
+    alert('Cloud upload failed. Using temporary QR only.');
   }
 }
 
 document.getElementById('printBtn')?.addEventListener('click', () => {
-const stripSrc = finalStripDataUrl;
+  const stripSrc = finalStripDataUrl;
   if (!stripSrc) {
     alert('No photostrip available to print yet.');
     return;
@@ -1039,35 +1123,52 @@ const stripSrc = finalStripDataUrl;
     <head>
       <title>Print Photostrip</title>
       <style>
-        @page { size: auto; margin: 0; }
-        html, body { margin: 0; padding: 0; background: white; text-align: center; }
-        .print-wrap {
-          width: 100%;
-          display: flex;
-          justify-content: center;
-          align-items: flex-start;
-          padding: 12px 0;
+        html, body {
+          margin: 0;
+          padding: 0;
+          width: 58mm;
+          height: 178mm;
+          overflow: hidden;
+          background: white;
         }
+
+        @page {
+          size: 58mm 178mm;
+          margin: 0;
+        }
+
+        body {
+          display: flex;
+          align-items: flex-start;
+          justify-content: center;
+        }
+
         img {
-          width: 300px;
-          max-width: 100%;
-          height: auto;
           display: block;
+          width: 58mm;
+          height: 178mm;
+          margin: 0;
+          padding: 0;
+          object-fit: contain;
+          page-break-inside: avoid;
         }
       </style>
     </head>
     <body>
-      <div class="print-wrap"><img src="${stripSrc}" alt="Photostrip" /></div>
+      <img src="${stripSrc}" alt="Photostrip" />
       <script>
         window.onload = function () {
-          window.focus();
-          window.print();
-          window.close();
+          setTimeout(function () {
+            window.focus();
+            window.print();
+            window.close();
+          }, 300);
         };
       <\/script>
     </body>
     </html>
   `);
+
   printWindow.document.close();
 });
 
@@ -1081,6 +1182,11 @@ document.getElementById('restartBtn')?.addEventListener('click', () => {
 
   Object.keys(answers).forEach(key => delete answers[key]);
   thumbSlots.forEach(img => img.removeAttribute('src'));
+
+  if (previewSpotifyCode) {
+    previewSpotifyCode.removeAttribute('src');
+    previewSpotifyCode.style.display = 'none';
+  }
 
   backendStatus.textContent = 'Waiting for your layout choice. Final song comes from the backend.';
   showScreen('screen-home');

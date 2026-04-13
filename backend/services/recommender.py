@@ -10,65 +10,57 @@ DB_PATH = BASE_DIR / 'data' / 'processed' / 'music_data_final.db'
 
 
 def get_recommendations(user_vector, user_genre):
-    """
-    Args:
-        user_vector (dict): {'valence': 0.5, 'energy': 0.5, 'tempo': 0.5, 'danceability': 0.5}
-        user_genre (dict): {'genre': 'pop'}
-    """
 
-    # 1. Extract inputs
     target_genre = user_genre.get('genre')
 
-    # 2. Define the keys we are using for the math
-    # NOTE: I renamed 'tempo' to 'tempo_normalized' to match your SQL column name
     feature_mapping = {
         'valence': user_vector['valence'],
         'energy': user_vector['energy'],
         'danceability': user_vector['danceability'],
-        'tempo_normalized': user_vector['tempo']  # Mapping user 'tempo' to DB 'tempo_normalized'
+        'tempo_normalized': user_vector['tempo']
     }
 
-    # 3. Pull data from SQL
     conn = sqlite3.connect(DB_PATH)
     query = "SELECT * FROM songs WHERE LOWER(genre) = LOWER(?)"
     df_genre = pd.read_sql_query(query, conn, params=(target_genre,))
     conn.close()
 
     if df_genre.empty:
-        return f"No songs found for genre: {target_genre}"
+        return json.dumps({"error": f"No songs found for genre: {target_genre}"})
 
-    # Drop any rows that have missing values in our features so the math doesn't break
     features_list = list(feature_mapping.keys())
     df_genre = df_genre.dropna(subset=features_list)
 
-    # Also, double check if df_genre is still not empty after dropping NaNs
     if df_genre.empty:
-        return "Found songs, but they are missing the required audio features."
+        return json.dumps({"error": "Songs missing features"})
 
-    # 4. Prepare vectors for Cosine Similarity
-    # We grab the keys from our mapping to ensure the order is identical
-    features_list = list(feature_mapping.keys())
-
-    # Song vectors from DB (filtered by the same features)
     song_vectors = df_genre[features_list].values
+    user_vec = [list(feature_mapping.values())]
 
-    # User vector from dict values
-    user_vector = [list(feature_mapping.values())]
+    similarities = cosine_similarity(user_vec, song_vectors)[0]
 
-    # 5. Calculate Similarity
-    # result is a list of scores between 0 and 1
-    similarities = cosine_similarity(user_vector, song_vectors)[0]
-
-    # 6. Formatting Results
     df_genre['similarity_percentage'] = (similarities * 100).round(2)
 
-    # Sort and pick top 5
+    # ✅ THIS MUST EXIST
     top_5 = df_genre.sort_values(by='similarity_percentage', ascending=False).head(5)
 
-    result_columns = ['artist', 'title', 'similarity_percentage', 'genre', 'spotify_id']
-    recommendations_list = top_5[result_columns].to_dict(orient='records')
+    # ✅ NEW FIXED FORMAT
+    recommendations_list = []
 
-    # Return as a JSON string
+    for _, row in top_5.iterrows():
+        spotify_id = row.get('spotify_id', '')
+
+        recommendations_list.append({
+            "artist": row['artist'],
+            "title": row['title'],
+            "match": row['similarity_percentage'],
+            "genre": row['genre'],
+            "spotify_id": spotify_id,
+            "spotify_url": f"https://open.spotify.com/track/{spotify_id}" if spotify_id else "",
+            "spotify_uri": f"spotify:track:{spotify_id}" if spotify_id else ""
+        })
+
+    # ✅ RETURN INSIDE FUNCTION
     return json.dumps(recommendations_list, indent=4, ensure_ascii=False)
 
 
