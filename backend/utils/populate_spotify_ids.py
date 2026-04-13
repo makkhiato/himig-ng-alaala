@@ -15,6 +15,7 @@ RESPONSIBILITIES:
 import sqlite3
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
+from collections import defaultdict
 import time
 import os
 from dotenv import load_dotenv
@@ -75,7 +76,7 @@ def populate_ids():
             conn.commit()
 
             # A polite 0.5s delay keeps us at 120 requests per minute, well within safe limits.
-            time.sleep(0.5)
+            time.sleep(2)
 
         except spotipy.exceptions.SpotifyException as e:
             # If we hit a hard rate limit despite retries, save progress and exit cleanly
@@ -92,5 +93,152 @@ def populate_ids():
     conn.close()
     print("\nBatch Complete! Progress has been saved to the database.")
 
+
+def get_valid_tracks_by_genre():
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # SQL Query: Get everything that actually has a real Spotify ID
+        query = """
+            SELECT genre, artist, title, spotify_id 
+            FROM songs 
+            WHERE spotify_id IS NOT NULL 
+              AND spotify_id != 'NOT_FOUND'
+            ORDER BY genre, artist
+        """
+        cursor.execute(query)
+        results = cursor.fetchall()
+
+        # Grouping the results using a dictionary
+        songs_by_genre = defaultdict(list)
+        for genre, artist, title, spotify_id in results:
+            # Handle cases where genre might be empty/null
+            safe_genre = genre if genre else "Unknown Genre"
+            songs_by_genre[safe_genre].append({
+                "artist": artist,
+                "title": title,
+                "spotify_id": spotify_id
+            })
+
+        # --- Output the Analysis ---
+        print("\n📊 --- VALID SPOTIFY TRACKS PER GENRE --- 📊\n")
+
+        total_valid_songs = 0
+
+        for genre, track_list in songs_by_genre.items():
+            count = len(track_list)
+            total_valid_songs += count
+            print(f"🎵 {genre.upper()}: {count} tracks")
+
+            # Print a quick sample of up to 3 songs per genre to verify
+            sample_size = min(3, count)
+            for i in range(sample_size):
+                song = track_list[i]
+                print(f"    - {song['title']} by {song['artist']} ({song['spotify_id']})")
+            if count > 3:
+                print(f"    ... and {count - 3} more.")
+            print("-" * 40)
+
+        print(f"\n✅ Total valid songs across all genres: {total_valid_songs}")
+
+        conn.close()
+
+        # Returns the dictionary in case you want to import this function elsewhere
+        return dict(songs_by_genre)
+
+    except sqlite3.Error as e:
+        print(f"⚠️ Database error: {e}")
+    except Exception as e:
+        print(f"⚠️ Unexpected error: {e}")
+
+
+def get_missing_tracks_by_genre():
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # SQL Query: Get everything flagged as 'NOT_FOUND'
+        query = """
+            SELECT genre, artist, title 
+            FROM songs 
+            WHERE spotify_id = 'NOT_FOUND'
+            ORDER BY genre, artist
+        """
+        cursor.execute(query)
+        results = cursor.fetchall()
+
+        # Grouping the results using a dictionary
+        missing_by_genre = defaultdict(list)
+        for genre, artist, title in results:
+            safe_genre = genre if genre else "Unknown Genre"
+            missing_by_genre[safe_genre].append({
+                "artist": artist,
+                "title": title
+            })
+
+        # --- Output the Analysis ---
+        print("\n⚠️ --- 'NOT FOUND' TRACKS PER GENRE --- ⚠️\n")
+
+        total_missing = 0
+
+        if not results:
+            print("🎉 Amazing! There are no 'NOT_FOUND' tracks in your database.")
+        else:
+            for genre, track_list in missing_by_genre.items():
+                count = len(track_list)
+                total_missing += count
+                print(f"🎵 {genre.upper()}: {count} tracks missing")
+
+                # Print all missing tracks so you can review them
+                for song in track_list:
+                    print(f"    ❌ {song['title']} by {song['artist']}")
+                print("-" * 50)
+
+            print(f"\nTotal 'NOT_FOUND' songs across all genres: {total_missing}")
+
+        conn.close()
+
+    except sqlite3.Error as e:
+        print(f"⚠️ Database error: {e}")
+    except Exception as e:
+        print(f"⚠️ Unexpected error: {e}")
+
+
+def delete_missing_tracks():
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # 1. Check how many we are about to delete
+        cursor.execute("SELECT COUNT(*) FROM songs WHERE spotify_id = 'NOT_FOUND'")
+        songs_to_delete = cursor.fetchone()[0]
+
+        if songs_to_delete == 0:
+            print("🎉 No 'NOT_FOUND' songs detected. Your database is already clean!")
+            conn.close()
+            return
+
+        print(f"⚠️ Found {songs_to_delete} unplayable tracks.")
+        print("🗑️ Deleting from database...")
+
+        # 2. Execute the DELETE command
+        cursor.execute("DELETE FROM songs WHERE spotify_id = 'NOT_FOUND'")
+
+        # 3. COMMIT is required to save changes when modifying a database!
+        conn.commit()
+
+        # 4. Check how many songs are left overall
+        cursor.execute("SELECT COUNT(*) FROM songs")
+        remaining_songs = cursor.fetchone()[0]
+
+        print(f"✅ Success! Removed {songs_to_delete} tracks.")
+        print(f"🎵 Your clean dataset now has {remaining_songs} perfectly playable songs.")
+
+        conn.close()
+
+    except sqlite3.Error as e:
+        print(f"❌ Database error: {e}")
+
 if __name__ == "__main__":
-    populate_ids()
+    delete_missing_tracks()
