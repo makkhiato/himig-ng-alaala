@@ -483,30 +483,43 @@ function renderLayouts() {
   `).join('');
 
   layoutGrid.querySelectorAll('.layout-card').forEach(card => {
-    card.addEventListener('click', async () => {
-      selectedLayout = layouts.find(layout => layout.id === card.dataset.layout);
-      layoutGrid.querySelectorAll('.layout-card').forEach(c => c.classList.remove('active'));
-      card.classList.add('active');
+  card.addEventListener('click', async () => {
+    selectedLayout = layouts.find(layout => layout.id === card.dataset.layout);
 
-      backendStatus.textContent = 'Calling backend...';
-      card.insertAdjacentHTML('beforeend', '<div class="mini-loading">Getting your top matches...</div>');
+    layoutGrid.querySelectorAll('.layout-card').forEach(c => c.classList.remove('active'));
+    card.classList.add('active');
 
-      try {
-        topMatches = await processSurveyWithBackend();
-        renderTop5(topMatches);
-        showScreen('screen-top5');
-      } catch (error) {
-        console.error(error);
-        backendStatus.textContent = 'Backend or matching failed. Check console.';
-        alert(error.message || 'Failed to get top matches.');
-      } finally {
-        renderLayouts();
+    backendStatus.textContent = 'Calling backend...';
+    card.insertAdjacentHTML('beforeend', '<div class="mini-loading">Getting your top matches...</div>');
+
+    try {
+      const res = await processSurveyWithBackend();
+
+      // 🔥 FORCE ARRAY SAFETY (THIS FIXES YOUR ERROR)
+      const safeMatches = Array.isArray(res?.results) ? res.results : [];
+
+      if (!safeMatches.length) {
+        throw new Error('No matches returned from backend.');
       }
-    });
+
+      topMatches = safeMatches;
+
+      renderTop5(topMatches);
+      showScreen('screen-top5');
+
+    } catch (error) {
+      console.error(error);
+      backendStatus.textContent = 'Backend or matching failed. Check console.';
+      alert(error.message || 'Failed to get top matches.');
+    } finally {
+      renderLayouts();
+    }
   });
+});
 }
 
-function renderTop5(matches) {
+function renderTop5(matches = []) {
+  if (!Array.isArray(matches)) matches = [];
   top5Grid.innerHTML = matches.map(song => `
     <div class="top5-card" data-rank="${song.rank}">
       <div class="top5-rank">${song.rank}</div>
@@ -536,7 +549,8 @@ function renderTop5(matches) {
       };
 
       finalStripDataUrl = await generateStrip(capturedShots, selectedLayout, finalSong);
-      populateResult();
+
+      await populateResult();
       showScreen('screen-result');
     });
   });
@@ -590,52 +604,59 @@ function normalizeGenre(label) {
   return genreMap[label] || label.toLowerCase();
 }
 
-async function processSurveyWithBackend() {
+function processSurveyWithBackend() {
   const payload = buildPayload();
 
-  const response = await fetch(BACKEND_URL, {
+  payload.strip = finalStripDataUrl || null;
+
+  return fetch(BACKEND_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
-  });
+  })
+  .then(async (response) => {
+    let data;
 
-  let data;
-  try {
-    data = await response.json();
-  } catch {
-    throw new Error('Backend did not return valid JSON.');
-  }
-
-  console.log('Backend response:', data);
-
-  if (!response.ok) {
-    throw new Error(data.message || 'Backend request failed.');
-  }
-
-  let results = [];
-
-  if (data.status === 'success' && Array.isArray(data.results) && data.results.length > 0) {
-    results = data.results;
-  } else if (Array.isArray(data.results) && data.results.length > 0) {
-    results = data.results;
-  } else {
-    const title = data.title || data.song_title || data.songTitle;
-    const artist = data.artist || data.song_artist || data.songArtist;
-
-    if (title && artist) {
-      results = [{ title, artist, match: 100 }];
-    } else {
-      throw new Error('Backend JSON is missing usable song data.');
+    try {
+      data = await response.json();
+    } catch {
+      throw new Error('Backend did not return valid JSON.');
     }
-  }
 
-  return results.slice(0, 5).map((song, index) => ({
-    rank: index + 1,
-    title: song.title || 'Unknown Title',
-    artist: song.artist || 'Unknown Artist',
-    match: Number(song.match ?? song.score ?? song.percentage ?? (100 - index * 5)),
-    albumArt: song.albumArt || song.album_art || song.image || song.cover || ''
-  }));
+    console.log('Backend response:', data);
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Backend request failed.');
+    }
+
+    let results = [];
+
+    if (Array.isArray(data.results) && data.results.length > 0) {
+      results = data.results;
+    } else {
+      const title = data.title || data.song_title || data.songTitle;
+      const artist = data.artist || data.song_artist || data.songArtist;
+
+      if (title && artist) {
+        results = [{ title, artist, match: 100 }];
+      } else {
+        throw new Error('Backend JSON is missing usable song data.');
+      }
+    }
+processSurveyWithBackend.lastDownloadUrl = data.download_url || null;
+    return {
+      results: results.slice(0, 5).map((song, index) => ({
+        rank: index + 1,
+        title: song.title || 'Unknown Title',
+        artist: song.artist || 'Unknown Artist',
+        match: Number(song.match ?? song.score ?? song.percentage ?? (100 - index * 5)),
+        albumArt: song.albumArt || song.album_art || song.image || song.cover || ''
+      })),
+
+      // ✅ THIS IS WHAT FIXES YOUR QR FLOW
+      download_url: data.download_url || null
+    };
+  });
 }
 
 function loadImage(src) {
@@ -647,67 +668,90 @@ function loadImage(src) {
   });
 }
 
-function getLayoutRenderConfig(layoutId) {
-  return layoutRenderMap[layoutId] || layoutRenderMap.bubble;
+async function getAutoLayoutConfig(layout) {
+  if (!layout.frameSrc) throw new Error("Missing frame source");
+
+  const { holes, frameWidth, frameHeight } =
+    await detectPhotoSlotsFromFrame(layout.frameSrc);
+
+  const scaleX = STRIP_EXPORT_WIDTH / frameWidth;
+  const scaleY = STRIP_EXPORT_HEIGHT / frameHeight;
+
+  const slots = holes.slice(0, 4).map(h => ({
+    x: h.x * scaleX,
+    y: h.y * scaleY,
+    w: h.w * scaleX,
+    h: h.h * scaleY,
+    r: 12
+  }));
+
+  return {
+    slots,
+    title: {
+      x: STRIP_EXPORT_WIDTH / 2,
+      y: STRIP_EXPORT_HEIGHT - 70,
+      maxWidth: 140,
+      lineHeight: 10,
+      font: 'bold 8px "Space Mono", monospace'
+    },
+    artist: {
+      x: STRIP_EXPORT_WIDTH / 2,
+      y: STRIP_EXPORT_HEIGHT - 50,
+      maxWidth: 140,
+      lineHeight: 9,
+      font: 'bold 7px "DM Sans", sans-serif'
+    }
+  };
 }
 
 async function generateStrip(shots, layout, song) {
   if (!shots.length) throw new Error('No captured shots found.');
+
+  const canvas = document.createElement('canvas');
+  canvas.width = STRIP_EXPORT_WIDTH;
+  canvas.height = STRIP_EXPORT_HEIGHT;
+
+  const ctx = canvas.getContext('2d');
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
 
   let overlayImage = null;
 
   if (layout.useOverlayFrame && layout.frameSrc) {
     try {
       overlayImage = await loadImage(layout.frameSrc);
-    } catch (error) {
-      console.warn('Frame image failed to load for export.', error);
+    } catch (e) {
+      console.warn("Frame load failed", e);
     }
   }
 
-  const config = getLayoutRenderConfig(layout.id);
+  // 🔥 USE NEW CONFIG WITH SCALING
+  const config = await getAutoLayoutConfig(layout);
 
-  const canvas = document.createElement('canvas');
-  canvas.width = STRIP_EXPORT_WIDTH;
-  canvas.height = STRIP_EXPORT_HEIGHT;
-  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  drawStripBase(ctx, canvas, layout);
-
+  // draw photos
   for (let i = 0; i < Math.min(4, shots.length, config.slots.length); i++) {
     const img = await loadImage(shots[i]);
     drawCoverImage(ctx, img, config.slots[i]);
   }
 
+  // draw frame ON TOP
   if (overlayImage) {
-    ctx.drawImage(overlayImage, 0, 0, STRIP_EXPORT_WIDTH, STRIP_EXPORT_HEIGHT);
+    ctx.drawImage(overlayImage, 0, 0, canvas.width, canvas.height);
   }
 
+  // draw text
   ctx.save();
   ctx.fillStyle = '#7d2b2d';
   ctx.textAlign = 'center';
-  ctx.textBaseline = 'alphabetic';
 
   ctx.font = config.title.font;
-  wrapText(
-    ctx,
-    song.title,
-    config.title.x,
-    config.title.y,
-    config.title.maxWidth,
-    config.title.lineHeight,
-    2
-  );
+  wrapText(ctx, song.title, config.title.x, config.title.y, config.title.maxWidth, config.title.lineHeight, 2);
 
   ctx.font = config.artist.font;
-  wrapText(
-    ctx,
-    song.artist,
-    config.artist.x,
-    config.artist.y,
-    config.artist.maxWidth,
-    config.artist.lineHeight || 8,
-    1
-  );
+  wrapText(ctx, song.artist, config.artist.x, config.artist.y, config.artist.maxWidth, config.artist.lineHeight, 1);
 
   ctx.restore();
 
@@ -719,41 +763,52 @@ function drawStripBase(ctx, canvas, layout) {
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  ctx.fillStyle = 'rgba(255,255,255,0)';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // ❌ REMOVE white slot background completely
+  // (this was blocking your frame holes)
 
-  ctx.fillStyle = '#ffffff';
-  config.slots.forEach(slot => {
-    roundedRect(ctx, slot.x, slot.y, slot.w, slot.h, slot.r || 16);
-    ctx.fill();
-  });
+  // optional debug bg (safe to remove)
+  ctx.fillStyle = 'transparent';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 }
 
+const DEBUG_SLOTS = false;
+
 function drawCoverImage(ctx, img, slot) {
+  ctx.save();
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+
+  // clip to hole
+  roundedRect(ctx, slot.x, slot.y, slot.w, slot.h, slot.r || 12);
+  ctx.clip();
+
   const imgRatio = img.width / img.height;
   const slotRatio = slot.w / slot.h;
 
-  let drawW;
-  let drawH;
-  let offsetX;
-  let offsetY;
+  let drawW, drawH;
 
+  // 🔥 balanced cover fit (no ugly zoom)
   if (imgRatio > slotRatio) {
     drawH = slot.h;
-    drawW = img.width * (slot.h / img.height);
-    offsetX = slot.x - (drawW - slot.w) / 2;
-    offsetY = slot.y;
+    drawW = drawH * imgRatio;
   } else {
     drawW = slot.w;
-    drawH = img.height * (slot.w / img.width);
-    offsetX = slot.x;
-    offsetY = slot.y - (drawH - slot.h) / 2;
+    drawH = drawW / imgRatio;
   }
 
-  ctx.save();
-  roundedRect(ctx, slot.x, slot.y, slot.w, slot.h, slot.r || 16);
-  ctx.clip();
-  ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
+  const dx = slot.x + (slot.w - drawW) / 2;
+  const dy = slot.y + (slot.h - drawH) / 2;
+
+  ctx.drawImage(img, dx, dy, drawW, drawH);
+
+  // 🔥 DEBUG MODE (toggle true)
+  if (DEBUG_SLOTS) {
+    ctx.strokeStyle = 'red';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(slot.x, slot.y, slot.w, slot.h);
+  }
+
   ctx.restore();
 }
 
@@ -799,15 +854,165 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight, maxLines = 2) {
   });
 }
 
-function populateResult() {
+function dataURLtoBlob(dataUrl) {
+  const arr = dataUrl.split(',');
+  const mime = arr[0].match(/:(.*?);/)[1];
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+
+  return new Blob([u8arr], { type: mime });
+}
+
+async function detectPhotoSlotsFromFrame(frameSrc) {
+  const img = await loadImage(frameSrc);
+
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = img.width;
+  tempCanvas.height = img.height;
+
+  const ctx = tempCanvas.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+
+  const imageData = ctx.getImageData(0, 0, img.width, img.height);
+  const data = imageData.data;
+
+  const visited = new Uint8Array(img.width * img.height);
+  const holes = [];
+
+  const isTransparent = (i) => data[i + 3] < 20;
+
+  function floodFill(startX, startY) {
+    const stack = [[startX, startY]];
+    let minX = startX, maxX = startX;
+    let minY = startY, maxY = startY;
+
+    while (stack.length) {
+      const [x, y] = stack.pop();
+      const idx = y * img.width + x;
+
+      if (visited[idx]) continue;
+      visited[idx] = 1;
+
+      const pixelIndex = idx * 4;
+      if (!isTransparent(pixelIndex)) continue;
+
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
+
+      if (x > 0) stack.push([x - 1, y]);
+      if (x < img.width - 1) stack.push([x + 1, y]);
+      if (y > 0) stack.push([x, y - 1]);
+      if (y < img.height - 1) stack.push([x, y + 1]);
+    }
+
+    return {
+      x: minX,
+      y: minY,
+      w: maxX - minX,
+      h: maxY - minY
+    };
+  }
+
+  for (let y = 0; y < img.height; y++) {
+    for (let x = 0; x < img.width; x++) {
+      const idx = y * img.width + x;
+
+      if (visited[idx]) continue;
+
+      const pixelIndex = idx * 4;
+
+      if (isTransparent(pixelIndex)) {
+        const hole = floodFill(x, y);
+
+        // ignore tiny noise
+        if (hole.w > 50 && hole.h > 50) {
+          holes.push(hole);
+        }
+      }
+    }
+  }
+
+  // sort top → bottom
+  holes.sort((a, b) => (b.w * b.h) - (a.w * a.h));
+holes.shift(); // remove largest
+
+// ✅ now sort real slots top → bottom
+holes.sort((a, b) => a.y - b.y);
+
+  return {
+    holes,
+    frameWidth: img.width,
+    frameHeight: img.height
+  };
+}
+
+async function uploadToCloudinary(dataUrl) {
+  const cloudName = "deugdxahz";
+  const uploadPreset = "photobooth_upload";
+
+  const formData = new FormData();
+
+  const blob = dataURLtoBlob(dataUrl);
+  formData.append("file", blob);
+  formData.append("upload_preset", uploadPreset);
+
+  const res = await fetch(
+    `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+    {
+      method: "POST",
+      body: formData
+    }
+  );
+
+  const data = await res.json();
+
+  if (!data.secure_url) {
+    throw new Error("Upload failed");
+  }
+
+  return data.secure_url;
+}
+
+async function populateResult() {
   document.getElementById('songTitle').textContent = finalSong.title;
   document.getElementById('songArtist').textContent = `by ${finalSong.artist}`;
   document.getElementById('finalStrip').src = finalStripDataUrl;
 
-  const spotifyUrl = `https://open.spotify.com/search/${encodeURIComponent(`${finalSong.title} ${finalSong.artist}`)}`;
-  document.getElementById('spotifyLink').href = spotifyUrl;
-  document.getElementById('downloadLink').href = finalStripDataUrl;
-  document.getElementById('qrImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(spotifyUrl)}`;
+  const downloadLink = document.getElementById('downloadLink');
+  downloadLink.href = finalStripDataUrl;
+
+  const qrImage = document.getElementById('qrImage');
+
+  try {
+    qrImage.alt = "Uploading image...";
+
+    const imageUrl = await uploadToCloudinary(finalStripDataUrl);
+
+    // store for debugging / future use
+    processSurveyWithBackend.lastDownloadUrl = imageUrl;
+
+    qrImage.src =
+      `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(imageUrl)}`;
+
+  } catch (err) {
+    console.error(err);
+
+    // fallback QR (still works, but not cross-device)
+    const blob = dataURLtoBlob(finalStripDataUrl);
+    const blobUrl = URL.createObjectURL(blob);
+
+    qrImage.src =
+      `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(blobUrl)}`;
+
+    alert("Cloud upload failed. Using temporary QR only.");
+  }
 }
 
 document.getElementById('printBtn')?.addEventListener('click', () => {
