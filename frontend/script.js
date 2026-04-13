@@ -12,6 +12,14 @@ const flashLayer = document.getElementById('flashLayer');
 const layoutGrid = document.getElementById('layoutGrid');
 const backendStatus = document.getElementById('backendStatus');
 const top5Grid = document.getElementById('top5Grid');
+const stripStage = document.getElementById('stripStage');
+const previewFrame = document.getElementById('previewFrame');
+const previewShot1 = document.getElementById('previewShot1');
+const previewShot2 = document.getElementById('previewShot2');
+const previewShot3 = document.getElementById('previewShot3');
+const previewShot4 = document.getElementById('previewShot4');
+const previewStripTitle = document.getElementById('previewStripTitle');
+const previewStripArtist = document.getElementById('previewStripArtist');
 
 const BACKEND_URL = 'http://127.0.0.1:5000/process-survey';
 const STRIP_EXPORT_WIDTH = 320;
@@ -799,10 +807,28 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight, maxLines = 2) {
   });
 }
 
+function updatePreviewStrip(layout, song, shots) {
+  if (!stripStage || !previewFrame) return;
+
+  stripStage.className = `strip-stage ${layout.id}`;
+  previewFrame.src = layout.frameSrc;
+
+  const previewImgs = [previewShot1, previewShot2, previewShot3, previewShot4];
+  previewImgs.forEach((imgEl, index) => {
+    const src = shots[index] || '';
+    imgEl.src = src;
+    imgEl.style.display = src ? 'block' : 'none';
+  });
+
+  previewStripTitle.textContent = song?.title || '';
+  previewStripArtist.textContent = song?.artist || '';
+}
+
 function populateResult() {
   document.getElementById('songTitle').textContent = finalSong.title;
   document.getElementById('songArtist').textContent = `by ${finalSong.artist}`;
-  document.getElementById('finalStrip').src = finalStripDataUrl;
+
+  updatePreviewStrip(selectedLayout, finalSong, capturedShots);
 
   const spotifyUrl = `https://open.spotify.com/search/${encodeURIComponent(`${finalSong.title} ${finalSong.artist}`)}`;
   document.getElementById('spotifyLink').href = spotifyUrl;
@@ -811,8 +837,7 @@ function populateResult() {
 }
 
 document.getElementById('printBtn')?.addEventListener('click', () => {
-  const stripSrc = document.getElementById('finalStrip').src;
-
+const stripSrc = finalStripDataUrl;
   if (!stripSrc) {
     alert('No photostrip available to print yet.');
     return;

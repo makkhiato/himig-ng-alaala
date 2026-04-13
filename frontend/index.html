@@ -137,9 +137,20 @@
             </div>
           </div>
 
-          <div class="strip-preview-wrap">
-            <img id="finalStrip" alt="Final photostrip" />
-          </div>
+<div class="strip-preview-wrap">
+  <div class="strip-stage" id="stripStage">
+    <div class="strip-slot slot-1"><img id="previewShot1" alt="Preview shot 1" /></div>
+    <div class="strip-slot slot-2"><img id="previewShot2" alt="Preview shot 2" /></div>
+    <div class="strip-slot slot-3"><img id="previewShot3" alt="Preview shot 3" /></div>
+    <div class="strip-slot slot-4"><img id="previewShot4" alt="Preview shot 4" /></div>
+
+    <img id="previewFrame" class="strip-frame" alt="Photostrip frame" />
+    <div id="previewStripText" class="strip-text-overlay">
+      <div id="previewStripTitle" class="strip-text-title"></div>
+      <div id="previewStripArtist" class="strip-text-artist"></div>
+    </div>
+  </div>
+</div>
 
           <div class="result-actions">
             <div class="qr-wrap">
