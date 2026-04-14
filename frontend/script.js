@@ -241,6 +241,49 @@ const layouts = [
   }
 ];
 
+const layoutRenderMap = {
+  monami: {
+    slots: [
+      { x: 52, y: 177, w: 216, h: 118, r: 12 },
+      { x: 52, y: 375, w: 216, h: 118, r: 12 },
+      { x: 52, y: 573, w: 216, h: 118, r: 12 },
+      { x: 52, y: 771, w: 216, h: 118, r: 12 }
+    ],
+    title: { x: 160, y: 915, maxWidth: 120, lineHeight: 10, font: 'bold 8px "Space Mono", monospace' },
+    artist: { x: 160, y: 932, maxWidth: 120, lineHeight: 9, font: 'bold 7px "DM Sans", sans-serif' }
+  },
+  butterball: {
+    slots: [
+      { x: 56, y: 206, w: 208, h: 110, r: 10 },
+      { x: 56, y: 404, w: 208, h: 110, r: 10 },
+      { x: 56, y: 602, w: 208, h: 110, r: 10 },
+      { x: 56, y: 800, w: 208, h: 110, r: 10 }
+    ],
+    title: { x: 160, y: 920, maxWidth: 100, lineHeight: 9, font: 'bold 7px "Space Mono", monospace' },
+    artist: { x: 160, y: 938, maxWidth: 100, lineHeight: 8, font: 'bold 6px "DM Sans", sans-serif' }
+  },
+  snoopy: {
+    slots: [
+      { x: 48, y: 182, w: 224, h: 116, r: 10 },
+      { x: 48, y: 380, w: 224, h: 116, r: 10 },
+      { x: 48, y: 578, w: 224, h: 116, r: 10 },
+      { x: 48, y: 776, w: 224, h: 116, r: 10 }
+    ],
+    title: { x: 160, y: 920, maxWidth: 120, lineHeight: 10, font: 'bold 8px "Space Mono", monospace' },
+    artist: { x: 160, y: 937, maxWidth: 120, lineHeight: 9, font: 'bold 7px "DM Sans", sans-serif' }
+  },
+  bubble: {
+    slots: [
+      { x: 46, y: 183, w: 228, h: 116, r: 10 },
+      { x: 46, y: 381, w: 228, h: 116, r: 10 },
+      { x: 46, y: 579, w: 228, h: 116, r: 10 },
+      { x: 46, y: 777, w: 228, h: 116, r: 10 }
+    ],
+    title: { x: 160, y: 920, maxWidth: 120, lineHeight: 10, font: 'bold 8px "Space Mono", monospace' },
+    artist: { x: 160, y: 937, maxWidth: 120, lineHeight: 9, font: 'bold 7px "DM Sans", sans-serif' }
+  }
+};
+
 let currentQuestionIndex = 0;
 const answers = {};
 let stream = null;
@@ -480,10 +523,20 @@ function renderLayouts() {
   });
 }
 
-function renderTop5(matches = []) {
+async function renderTop5(matches = []) {
   if (!Array.isArray(matches)) matches = [];
 
-  top5Grid.innerHTML = matches.map(song => `
+  const enrichedMatches = await Promise.all(matches.map(async (song) => {
+    let albumArt = song.albumArt;
+
+    if (!albumArt || albumArt.trim() === '') {
+      albumArt = await fetchAlbumArt(song.title, song.artist);
+    }
+
+    return { ...song, albumArt };
+  }));
+
+  top5Grid.innerHTML = enrichedMatches.map(song => `
     <div class="top5-card" data-rank="${song.rank}">
       <div class="top5-rank">${song.rank}</div>
       <img
@@ -498,7 +551,7 @@ function renderTop5(matches = []) {
       </div>
       <button class="top5-pick" type="button">CHOOSE</button>
     </div>
-  `).join('');
+  `).join('')
 
   top5Grid.querySelectorAll('.top5-pick').forEach(button => {
     button.addEventListener('click', async (event) => {
@@ -847,7 +900,16 @@ function drawCoverImage(ctx, img, slot) {
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
 
-  roundedRect(ctx, slot.x, slot.y, slot.w, slot.h, slot.r || 12);
+  const BLEED = 6;
+
+  roundedRect(
+    ctx,
+    slot.x - BLEED,
+    slot.y - BLEED,
+    slot.w + BLEED * 2,
+    slot.h + BLEED * 2,
+    slot.r || 12
+  );
   ctx.clip();
 
   const imgRatio = img.width / img.height;
@@ -856,11 +918,11 @@ function drawCoverImage(ctx, img, slot) {
   let drawW, drawH;
 
   if (imgRatio > slotRatio) {
-    drawH = slot.h;
-    drawW = drawH * imgRatio;
+    drawH = slot.h + BLEED * 2;
+    drawW = img.width * (drawH / img.height);
   } else {
-    drawW = slot.w;
-    drawH = drawW / imgRatio;
+    drawW = slot.w + BLEED * 2;
+    drawH = img.height * (drawW / img.width);
   }
 
   const dx = slot.x + (slot.w - drawW) / 2;
@@ -1195,3 +1257,19 @@ document.getElementById('restartBtn')?.addEventListener('click', () => {
 
 window.addEventListener('beforeunload', stopCamera);
 renderQuiz();
+
+async function fetchAlbumArt(title, artist) {
+  try {
+    const query = encodeURIComponent(`${title} ${artist}`);
+    const res = await fetch(`https://itunes.apple.com/search?term=${query}&limit=1&media=music`);
+    const data = await res.json();
+
+    if (data.results && data.results.length > 0) {
+      return data.results[0].artworkUrl100.replace('100x100', '300x300');
+    }
+  } catch (e) {
+    console.warn('Album art fetch failed:', e);
+  }
+
+  return 'https://via.placeholder.com/300?text=No+Image';
+}
