@@ -2,7 +2,7 @@ import pandas as pd
 import sqlite3
 import json
 from pathlib import Path
-from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.metrics.pairwise import euclidean_distances
 
 # Path setup
 BASE_DIR = Path(__file__).parent.parent  # This goes from 'services' up to 'backend'
@@ -37,9 +37,13 @@ def get_recommendations(user_vector, user_genre):
     song_vectors = df_genre[features_list].values
     user_vec = [list(feature_mapping.values())]
 
-    similarities = cosine_similarity(user_vec, song_vectors)[0]
+    distances = euclidean_distances(user_vec, song_vectors)[0]
 
-    df_genre['similarity_percentage'] = (similarities * 100).round(2)
+    max_distance = 2.0
+    true_percentage = (1 - (distances / max_distance)) * 100
+
+    df_genre['similarity_percentage'] = true_percentage.round(2)
+    df_genre['similarity_percentage'] = df_genre['similarity_percentage'].apply(lambda x: max(45.0, x))
 
     # ✅ THIS MUST EXIST
     top_5 = df_genre.sort_values(by='similarity_percentage', ascending=False).head(5)
