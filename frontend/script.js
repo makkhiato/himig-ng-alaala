@@ -23,8 +23,8 @@ const previewStripArtist = document.getElementById('previewStripArtist');
 const previewSpotifyCode = document.getElementById('previewSpotifyCode');
 
 const BACKEND_URL = 'http://127.0.0.1:5000/process-survey';
-const STRIP_EXPORT_WIDTH = 640;
-const STRIP_EXPORT_HEIGHT = 1960;
+const STRIP_EXPORT_WIDTH = 320;
+const STRIP_EXPORT_HEIGHT = 980;
 
 const questions = [
   {
@@ -483,7 +483,17 @@ function renderLayouts() {
 function renderTop5(matches = []) {
   if (!Array.isArray(matches)) matches = [];
 
-  top5Grid.innerHTML = matches.map(song => `
+  const enrichedMatches = await Promise.all(matches.map(async (song) => {
+    let albumArt = song.albumArt;
+
+    if (!albumArt || albumArt.trim() === '') {
+      albumArt = await fetchAlbumArt(song.title, song.artist);
+    }
+
+    return { ...song, albumArt };
+  }));
+
+  top5Grid.innerHTML = enrichedMatches.map(song => `
     <div class="top5-card" data-rank="${song.rank}">
       <div class="top5-rank">${song.rank}</div>
       <img
@@ -498,7 +508,7 @@ function renderTop5(matches = []) {
       </div>
       <button class="top5-pick" type="button">CHOOSE</button>
     </div>
-  `).join('');
+  `).join('')
 
   top5Grid.querySelectorAll('.top5-pick').forEach(button => {
     button.addEventListener('click', async (event) => {
@@ -847,7 +857,16 @@ function drawCoverImage(ctx, img, slot) {
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
 
-  roundedRect(ctx, slot.x, slot.y, slot.w, slot.h, slot.r || 12);
+  const BLEED = 6;
+
+  roundedRect(
+    ctx,
+    slot.x - BLEED,
+    slot.y - BLEED,
+    slot.w + BLEED * 2,
+    slot.h + BLEED * 2,
+    slot.r || 12
+  );
   ctx.clip();
 
   const imgRatio = img.width / img.height;
@@ -856,11 +875,11 @@ function drawCoverImage(ctx, img, slot) {
   let drawW, drawH;
 
   if (imgRatio > slotRatio) {
-    drawH = slot.h;
-    drawW = drawH * imgRatio;
+    drawH = slot.h + BLEED * 2;
+    drawW = img.width * (drawH / img.height);
   } else {
-    drawW = slot.w;
-    drawH = drawW / imgRatio;
+    drawW = slot.w + BLEED * 2;
+    drawH = img.height * (drawW / img.width);
   }
 
   const dx = slot.x + (slot.w - drawW) / 2;
@@ -1195,3 +1214,19 @@ document.getElementById('restartBtn')?.addEventListener('click', () => {
 
 window.addEventListener('beforeunload', stopCamera);
 renderQuiz();
+
+async function fetchAlbumArt(title, artist) {
+  try {
+    const query = encodeURIComponent(`${title} ${artist}`);
+    const res = await fetch(`https://itunes.apple.com/search?term=${query}&limit=1&media=music`);
+    const data = await res.json();
+
+    if (data.results && data.results.length > 0) {
+      return data.results[0].artworkUrl100.replace('100x100', '300x300');
+    }
+  } catch (e) {
+    console.warn('Album art fetch failed:', e);
+  }
+
+  return 'https://via.placeholder.com/300?text=No+Image';
+}
