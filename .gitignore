@@ -34,3 +34,7 @@ node_modules/
 
 # Uploaded images (photobooth)
 uploads
+
+backend/utils/cache_manager_1.py
+backend/utils/get_barcode.py
+frontend/test.html

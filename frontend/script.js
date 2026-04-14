@@ -661,7 +661,7 @@ function spotifyUriFromUrl(url) {
 
 function buildSpotifyCodeImageUrl(spotifyUri, width = 420) {
   if (!spotifyUri) return '';
-  return `https://scannables.scdn.co/uri/plain/png/F7F1D8/black/${width}/${encodeURIComponent(spotifyUri)}`;
+  return `https://scannables.scdn.co/uri/plain/png/FFFFFF/black/${width}/${encodeURIComponent(spotifyUri)}`;
 }
 
 async function getAutoLayoutConfig(layout) {
@@ -813,6 +813,7 @@ async function generateStrip(shots, layout, song) {
   if (spotifyCodeUrl) {
     try {
       const spotifyCodeImg = await loadImage(spotifyCodeUrl);
+      ctx.globalCompositeOperation = 'multiply';
       ctx.drawImage(
         spotifyCodeImg,
         config.spotifyCode.x,
