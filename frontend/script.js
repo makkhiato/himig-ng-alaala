@@ -23,8 +23,8 @@ const previewStripArtist = document.getElementById('previewStripArtist');
 const previewSpotifyCode = document.getElementById('previewSpotifyCode');
 
 const BACKEND_URL = 'http://127.0.0.1:5000/process-survey';
-const STRIP_EXPORT_WIDTH = 320;
-const STRIP_EXPORT_HEIGHT = 980;
+const STRIP_EXPORT_WIDTH = 640;
+const STRIP_EXPORT_HEIGHT = 1960;
 
 const questions = [
   {
@@ -240,6 +240,49 @@ const layouts = [
     colors: { border: '#e25f76', panel: '#ffd9df', accent: '#ff7f96', text: '#c53c56', bg: '#fff8fa' }
   }
 ];
+
+const layoutRenderMap = {
+  monami: {
+    slots: [
+      { x: 52, y: 177, w: 216, h: 118, r: 12 },
+      { x: 52, y: 375, w: 216, h: 118, r: 12 },
+      { x: 52, y: 573, w: 216, h: 118, r: 12 },
+      { x: 52, y: 771, w: 216, h: 118, r: 12 }
+    ],
+    title: { x: 160, y: 915, maxWidth: 120, lineHeight: 10, font: 'bold 8px "Space Mono", monospace' },
+    artist: { x: 160, y: 932, maxWidth: 120, lineHeight: 9, font: 'bold 7px "DM Sans", sans-serif' }
+  },
+  butterball: {
+    slots: [
+      { x: 56, y: 206, w: 208, h: 110, r: 10 },
+      { x: 56, y: 404, w: 208, h: 110, r: 10 },
+      { x: 56, y: 602, w: 208, h: 110, r: 10 },
+      { x: 56, y: 800, w: 208, h: 110, r: 10 }
+    ],
+    title: { x: 160, y: 920, maxWidth: 100, lineHeight: 9, font: 'bold 7px "Space Mono", monospace' },
+    artist: { x: 160, y: 938, maxWidth: 100, lineHeight: 8, font: 'bold 6px "DM Sans", sans-serif' }
+  },
+  snoopy: {
+    slots: [
+      { x: 48, y: 182, w: 224, h: 116, r: 10 },
+      { x: 48, y: 380, w: 224, h: 116, r: 10 },
+      { x: 48, y: 578, w: 224, h: 116, r: 10 },
+      { x: 48, y: 776, w: 224, h: 116, r: 10 }
+    ],
+    title: { x: 160, y: 920, maxWidth: 120, lineHeight: 10, font: 'bold 8px "Space Mono", monospace' },
+    artist: { x: 160, y: 937, maxWidth: 120, lineHeight: 9, font: 'bold 7px "DM Sans", sans-serif' }
+  },
+  bubble: {
+    slots: [
+      { x: 46, y: 183, w: 228, h: 116, r: 10 },
+      { x: 46, y: 381, w: 228, h: 116, r: 10 },
+      { x: 46, y: 579, w: 228, h: 116, r: 10 },
+      { x: 46, y: 777, w: 228, h: 116, r: 10 }
+    ],
+    title: { x: 160, y: 920, maxWidth: 120, lineHeight: 10, font: 'bold 8px "Space Mono", monospace' },
+    artist: { x: 160, y: 937, maxWidth: 120, lineHeight: 9, font: 'bold 7px "DM Sans", sans-serif' }
+  }
+};
 
 let currentQuestionIndex = 0;
 const answers = {};
@@ -480,7 +523,7 @@ function renderLayouts() {
   });
 }
 
-function renderTop5(matches = []) {
+async function renderTop5(matches = []) {
   if (!Array.isArray(matches)) matches = [];
 
   const enrichedMatches = await Promise.all(matches.map(async (song) => {
