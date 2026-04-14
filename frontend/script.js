@@ -213,7 +213,7 @@ const layouts = [
     previewSrc: 'assets/monami-frame.png',
     frameSrc: 'assets/monami-frame.png',
     useOverlayFrame: true,
-    colors: { border: '#ea567c', panel: '#ffd6e3', accent: '#ee6b95', text: '#bc365f', bg: '#fff6fb' }
+    colors: { border: '#ea567c', panel: '#ffd6e3', accent: '#ee6b95', text: '#bc365f', bg: '#f8c6c6' }
   },
   {
     id: 'butterball',
@@ -221,7 +221,7 @@ const layouts = [
     previewSrc: 'assets/butterball-frame.png',
     frameSrc: 'assets/butterball-frame.png',
     useOverlayFrame: true,
-    colors: { border: '#b79c2b', panel: '#faefba', accent: '#d6bb52', text: '#8a6d00', bg: '#fffdf4' }
+    colors: { border: '#b79c2b', panel: '#faefba', accent: '#d6bb52', text: '#8a6d00', bg: '#f7e7a3' }
   },
   {
     id: 'snoopy',
@@ -229,7 +229,7 @@ const layouts = [
     previewSrc: 'assets/snoopy-frame.png',
     frameSrc: 'assets/snoopy-frame.png',
     useOverlayFrame: true,
-    colors: { border: '#5ab7bb', panel: '#d5f0f1', accent: '#8fd7d5', text: '#2f767a', bg: '#f6ffff' }
+    colors: { border: '#5ab7bb', panel: '#d5f0f1', accent: '#8fd7d5', text: '#2f767a', bg: '#BFEBDD' }
   },
   {
     id: 'bubble',
@@ -237,7 +237,41 @@ const layouts = [
     previewSrc: 'assets/bubble-frame.png',
     frameSrc: 'assets/bubble-frame.png',
     useOverlayFrame: true,
-    colors: { border: '#e25f76', panel: '#ffd9df', accent: '#ff7f96', text: '#c53c56', bg: '#fff8fa' }
+    colors: { border: '#e25f76', panel: '#ffd9df', accent: '#ff7f96', text: '#c53c56', bg: '#f6c1c7' }
+  },
+
+  // NEW 4
+  {
+    id: 'charot',
+    label: 'Charot Laang',
+    previewSrc: 'assets/charot-frame.png',
+    frameSrc: 'assets/charot-frame.png',
+    useOverlayFrame: true,
+    colors: { border: '#8d4d2c', panel: '#f2d6ae', accent: '#c78a56', text: '#6c371d', bg: '#f3d9b8' }
+  },
+  {
+    id: 'choconat',
+    label: 'Choco Nat',
+    previewSrc: 'assets/choconat-frame.png',
+    frameSrc: 'assets/choconat-frame.png',
+    useOverlayFrame: true,
+    colors: { border: '#8f5c5c', panel: '#f2e3e3', accent: '#c89f9f', text: '#6a3f3f', bg: '#f6ecec' }
+  },
+  {
+    id: 'oipillows',
+    label: 'Oi Pillows',
+    previewSrc: 'assets/oipillows-frame.png',
+    frameSrc: 'assets/oipillows-frame.png',
+    useOverlayFrame: true,
+    colors: { border: '#c59b24', panel: '#ffe7a3', accent: '#f0c94d', text: '#7e5e00', bg: '#ffe199' }
+  },
+  {
+    id: 'pochi',
+    label: 'Pochi Strawberry Cream',
+    previewSrc: 'assets/pochi-frame.png',
+    frameSrc: 'assets/pochi-frame.png',
+    useOverlayFrame: true,
+    colors: { border: '#e58aac', panel: '#ffd9e8', accent: '#ffb3cd', text: '#b84f79', bg: '#ffd6e5' }
   }
 ];
 
@@ -272,6 +306,7 @@ const layoutRenderMap = {
     title: { x: 160, y: 920, maxWidth: 120, lineHeight: 10, font: 'bold 8px "Space Mono", monospace' },
     artist: { x: 160, y: 937, maxWidth: 120, lineHeight: 9, font: 'bold 7px "DM Sans", sans-serif' }
   },
+  
   bubble: {
     slots: [
       { x: 46, y: 183, w: 228, h: 116, r: 10 },
@@ -849,7 +884,9 @@ async function generateStrip(shots, layout, song) {
 
   const config = await getAutoLayoutConfig(layout);
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+ctx.clearRect(0, 0, canvas.width, canvas.height);
+ctx.fillStyle = layout?.colors?.bg || '#ffffff';
+ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   for (let i = 0; i < Math.min(4, shots.length, config.slots.length); i++) {
     const img = await loadImage(shots[i]);
@@ -1140,7 +1177,7 @@ async function populateResult() {
 
   stripStage.classList.remove('monami', 'butterball', 'snoopy', 'bubble');
   stripStage.classList.add(selectedLayout.id);
-
+  stripStage.style.background = selectedLayout?.colors?.bg || '#ffffff';
   await applyPreviewLayout(selectedLayout);
   await applyPreviewBottomMeta(selectedLayout, finalSong);
 
