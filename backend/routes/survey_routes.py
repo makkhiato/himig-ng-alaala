@@ -16,18 +16,22 @@ from flask import Blueprint, request, jsonify
 from utils.vibe_mapper import map_to_vector
 from services.recommender import get_recommendations
 import json
+import logging
 
 survey_bp = Blueprint("survey", __name__)
 
+logger = logging.getLogger(__name__)
 
 @survey_bp.route("/process-survey", methods=["POST"])
 def process_survey():
     try:
         # 1. Get JSON data from request
         data = request.get_json()
+        logger.info(f"Received new survey request. Target genre: '{data.get("genre")}'")
 
         # 2. Validate if frontend sent the survey answers
         if not data:
+            logger.error(f"No JSON received. Rejecting request")
             return jsonify({"error": "No JSON received"}), 400
 
         # 3. Extract answers and genre
@@ -61,6 +65,7 @@ def process_survey():
 
         # 4. Logic: Map survey to vector -> Get recommendations
         user_vector = map_to_vector(answers)
+        logger.info(f"Mapped user vector: {user_vector}")
         recommendations = get_recommendations(user_vector, genre_dict)
 
         # If recommender returns a JSON string, parse it
@@ -73,6 +78,7 @@ def process_survey():
         if isinstance(recommendations_list, dict) and "error" in recommendations_list:
             return jsonify(recommendations_list), 404
 
+        logger.info("Successfully sent Top 5 recommendations back to frontend.")
         return jsonify({
             "status": "success",
             "results": recommendations_list

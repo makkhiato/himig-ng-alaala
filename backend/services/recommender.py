@@ -3,6 +3,9 @@ import sqlite3
 import json
 from pathlib import Path
 from sklearn.metrics.pairwise import euclidean_distances
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Path setup
 BASE_DIR = Path(__file__).parent.parent  # This goes from 'services' up to 'backend'
@@ -24,14 +27,17 @@ def get_recommendations(user_vector, user_genre):
     query = "SELECT * FROM songs WHERE LOWER(genre) = LOWER(?)"
     df_genre = pd.read_sql_query(query, conn, params=(target_genre,))
     conn.close()
+    logger.info(f"Retrieved {len(df_genre)} songs from database for genre '{target_genre}'")
 
     if df_genre.empty:
+        logger.warning(f"Zero songs found in database for genre: {target_genre}")
         return json.dumps({"error": f"No songs found for genre: {target_genre}"})
 
     features_list = list(feature_mapping.keys())
     df_genre = df_genre.dropna(subset=features_list)
 
     if df_genre.empty:
+        logger.warning(f"Songs in database missing features")
         return json.dumps({"error": "Songs missing features"})
 
     song_vectors = df_genre[features_list].values
@@ -63,6 +69,10 @@ def get_recommendations(user_vector, user_genre):
             "spotify_url": f"https://open.spotify.com/track/{spotify_id}" if spotify_id else "",
             "spotify_uri": f"spotify:track:{spotify_id}" if spotify_id else ""
         })
+
+    song_summary = [f"{Song['title']} ({Song['match']}%)" for Song in recommendations_list]
+    songs_string = ", ".join(song_summary)
+    logger.info(f"Top 5 for '{target_genre}': {songs_string}")
 
     # ✅ RETURN INSIDE FUNCTION
     return json.dumps(recommendations_list, indent=4, ensure_ascii=False)
