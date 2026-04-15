@@ -249,22 +249,7 @@ const layouts = [
     useOverlayFrame: true,
     colors: { border: '#8d4d2c', panel: '#f2d6ae', accent: '#c78a56', text: '#6c371d', bg: '#f3d9b8' }
   },
-  {
-    id: 'choconat',
-    label: 'Choco Nat',
-    previewSrc: 'assets/choconat-frame.png',
-    frameSrc: 'assets/choconat-frame.png',
-    useOverlayFrame: true,
-    colors: { border: '#8f5c5c', panel: '#f2e3e3', accent: '#c89f9f', text: '#6a3f3f', bg: '#f6ecec' }
-  },
-  {
-    id: 'oipillows',
-    label: 'Oi Pillows',
-    previewSrc: 'assets/oipillows-frame.png',
-    frameSrc: 'assets/oipillows-frame.png',
-    useOverlayFrame: true,
-    colors: { border: '#c59b24', panel: '#ffe7a3', accent: '#f0c94d', text: '#7e5e00', bg: '#ffe199' }
-  },
+
   {
     id: 'pochi',
     label: 'Pochi Strawberry Cream',
@@ -900,21 +885,41 @@ ctx.fillRect(0, 0, canvas.width, canvas.height);
   const spotifyUri = song.spotifyUri || spotifyUriFromUrl(song.spotifyUrl);
   const spotifyCodeUrl = buildSpotifyCodeImageUrl(spotifyUri);
 
-  if (spotifyCodeUrl) {
-    try {
-      const spotifyCodeImg = await loadImage(spotifyCodeUrl);
-      ctx.globalCompositeOperation = 'multiply';
-      ctx.drawImage(
-        spotifyCodeImg,
-        config.spotifyCode.x,
-        config.spotifyCode.y,
-        config.spotifyCode.w,
-        config.spotifyCode.h
-      );
-    } catch (e) {
-      console.warn('Spotify code image load failed', e);
-    }
+if (spotifyCodeUrl) {
+  try {
+    const spotifyCodeImg = await loadImage(spotifyCodeUrl);
+
+    // ✅ background behind barcode
+    ctx.save();
+    ctx.fillStyle = '#F6F1DC'; // cream
+
+ctx.beginPath();
+ctx.roundRect(
+  config.spotifyCode.x - 12,
+  config.spotifyCode.y - 8,
+  config.spotifyCode.w + 24,
+  config.spotifyCode.h + 16,
+  14
+);
+ctx.fill();
+
+    ctx.restore();
+
+    // ✅ barcode on top
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.drawImage(
+      spotifyCodeImg,
+      config.spotifyCode.x,
+      config.spotifyCode.y,
+      config.spotifyCode.w,
+      config.spotifyCode.h
+    );
+    ctx.globalCompositeOperation = 'source-over';
+
+  } catch (e) {
+    console.warn('Spotify code image load failed', e);
   }
+}
 
   ctx.save();
 ctx.fillStyle = '#6B2A2E';
